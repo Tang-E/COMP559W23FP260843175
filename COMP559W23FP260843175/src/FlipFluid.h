@@ -22,25 +22,25 @@ class FlipFluid {
 		float fInvSpacing;
 		int fNumCells;
 
-		float* u;
-		float* v;
-		float* du;
-		float* dv;
-		float* prevU;
-		float* prevV;
-		float* p;
-		float* s;
-		int* cellType;
-		float* cellColor;
+		std::vector<float> u;
+		std::vector<float> v;
+		std::vector<float> du;
+		std::vector<float> dv;
+		std::vector<float> prevU;
+		std::vector<float> prevV;
+		std::vector<float> p;
+		std::vector<float> s;
+		std::vector<int> cellType;
+		std::vector<float> cellColor;
 
 		// Particle Properties
 
 		int maxParticles;
 
-		float* particlePos;
-		float* particleColor;
-		float* particleVel;
-		float* particleDensity;
+		std::vector<float> particlePos;
+		std::vector<float> particleColor;
+		std::vector<float> particleVel;
+		std::vector<float> particleDensity;
 		float particleRestDensity;
 
 		float particleRadius;
@@ -49,9 +49,9 @@ class FlipFluid {
 		int pNumY;
 		int pNumCells;
 
-		int* numCellParticles;
-		int* firstCellParticle;
-		int* cellParticleIds;
+		std::vector<int> numCellParticles;
+		std::vector<int> firstCellParticle;
+		std::vector<int> cellParticleIds;
 
 		int numParticles;
 

@@ -8,12 +8,6 @@
 * because I don't want to write in javascript.
 *
 * @author Edwin Pan (260843175) for COMP559 Winter 2023 Final Project
-*
-* Extra notes:
-*	I use memset() to fill arrays of float with zeros. It is not guaranteed that
-*	the float and float formatting produces 0 when all bits are false - and according
-*	to here https://stackoverflow.com/questions/4629853/is-it-legal-to-use-memset-0-on-an-array-of-doubles
-*	it is only true of "__STDC_IEC_559__" is defined. So we start with that.
 */
 
 
@@ -48,25 +42,25 @@ class FlipFluid {
 		float fInvSpacing;
 		int fNumCells;
 
-		float* u;
-		float* v;
-		float* du;
-		float* dv;
-		float* prevU;
-		float* prevV;
-		float* p;
-		float* s;
-		int* cellType;
-		float* cellColor;
+		std::vector<float> u;
+		std::vector<float> v;
+		std::vector<float> du;
+		std::vector<float> dv;
+		std::vector<float> prevU;
+		std::vector<float> prevV;
+		std::vector<float> p;
+		std::vector<float> s;
+		std::vector<int> cellType;
+		std::vector<float> cellColor;
 
 		// Particle Properties
 
 		int maxParticles;
 
-		float* particlePos;
-		float* particleColor;
-		float* particleVel;
-		float* particleDensity;
+		std::vector<float> particlePos;
+		std::vector<float> particleColor;
+		std::vector<float> particleVel;
+		std::vector<float> particleDensity;
 		float particleRestDensity;
 
 		float particleRadius;
@@ -75,9 +69,9 @@ class FlipFluid {
 		int pNumY;
 		int pNumCells;
 
-		int* numCellParticles;
-		int* firstCellParticle;
-		int* cellParticleIds;
+		std::vector<int> numCellParticles;
+		std::vector<int> firstCellParticle;
+		std::vector<int> cellParticleIds;
 
 		int numParticles;
 
@@ -96,28 +90,28 @@ class FlipFluid {
 			this->fInvSpacing = 1.0 / this->h;
 			this->fNumCells = this->fNumX * this->fNumY;
 
-			this->u = new float[fNumCells];
-			this->v = new float[fNumCells];
-			this->du = new float[fNumCells];
-			this->dv = new float[fNumCells];
-			this->prevU = new float[fNumCells];
-			this->prevV = new float[fNumCells];
-			this->p = new float[fNumCells];
-			this->s = new float[fNumCells];
-			this->cellType = new int[fNumCells];
-			this->cellColor = new float[3 * fNumCells];
+			this->u.reserve(fNumCells);
+			this->v.reserve(fNumCells);
+			this->du.reserve(fNumCells);
+			this->dv.reserve(fNumCells);
+			this->prevU.reserve(fNumCells);
+			this->prevV.reserve(fNumCells);
+			this->p.reserve(fNumCells);
+			this->s.reserve(fNumCells);
+			this->cellType.reserve(fNumCells);
+			this->cellColor.reserve(3 * fNumCells);
 
 			// Particle Properties
 
 			this->maxParticles = maxParticles;
 
-			this->particlePos = new float[this->maxParticles];
-			this->particleColor = new float[3 * this->maxParticles];
+			this->particlePos.reserve(this->maxParticles);
+			this->particleColor.reserve(3 * this->maxParticles);
 			for (int i = 0; i < this->maxParticles; i++) {
 				this->particleColor[3 * i + 2] = 1.0; // Make blue, not white!
 			}
-			this->particleVel = new float[2 * this->maxParticles];
-			this->particleDensity = new float[this->fNumCells];
+			this->particleVel.reserve(2 * this->maxParticles);
+			this->particleDensity.reserve(this->fNumCells);
 			this->particleRestDensity = 0.0;
 
 			this->particleRadius = particleRadius;
@@ -126,37 +120,12 @@ class FlipFluid {
 			this->pNumY = floor(height * this->pInvSpacing) + 1;
 			this->pNumCells = this->pNumX * this->pNumY;
 
-			this->numCellParticles = new int[this->pNumCells];
-			this->firstCellParticle = new int[this->pNumCells + 1];
-			this->cellParticleIds = new int[this->maxParticles];
+			this->numCellParticles.reserve(this->pNumCells);
+			this->firstCellParticle.reserve(this->pNumCells + 1);
+			this->cellParticleIds.reserve(this->maxParticles);
 
 			this->numParticles = 0;
 
-			// Check for dependency regarding memset(), used in functions
-	#ifndef __STDC_IEC_559__ 
-			std::cout << "ALERT! float and float types do not match IEC60599 single format and memset() operations will fail!" << std::endl;
-	#endif
-
-		}
-
-		~FlipFluid() {
-			delete[] u;
-			delete[] v;
-			delete[] du;
-			delete[] dv;
-			delete[] prevU;
-			delete[] prevV;
-			delete[] p;
-			delete[] s;
-			delete[] cellType;
-			delete[] cellColor;
-			delete[] particlePos;
-			delete[] particleColor;
-			delete[] particleVel;
-			delete[] particleDensity;
-			delete[] numCellParticles;
-			delete[] firstCellParticle;
-			delete[] cellParticleIds;
 		}
 
 		/*
@@ -186,7 +155,7 @@ class FlipFluid {
 
 			// count particles per cell
 
-			std::memset(numCellParticles, 0, pNumCells * sizeof(float));
+			std::fill(numCellParticles.begin(), numCellParticles.end(), 0);
 
 			for (int i = 0; i < numParticles; i++) {
 				float x = particlePos[2 * i];
@@ -358,8 +327,8 @@ class FlipFluid {
 
 			//float d = particleDensity;
 			//d.fill(0.0);
-			float* d = new float[fNumCells];
-			memset(d, 0, sizeof(float) * fNumCells);
+			std::vector<float> d(fNumCells);
+			std::fill(d.begin(), d.end(), 0);
 
 			for (int i = 0; i < numParticles; i++) {
 				float x = particlePos[2 * i];
@@ -434,10 +403,10 @@ class FlipFluid {
 				copy(u, prevU, fNumCells);
 				copy(v, prevV, fNumCells);
 
-				memset(du, 0, sizeof(float) * fNumCells);
-				memset(dv, 0, sizeof(float) * fNumCells);
-				memset(u, 0, sizeof(float) * fNumCells);
-				memset(v, 0, sizeof(float) * fNumCells);
+				std::fill(du.begin(), du.end(), 0);
+				std::fill(dv.begin(), dv.end(), 0);
+				std::fill(u.begin(), u.end(), 0);
+				std::fill(v.begin(), v.end(), 0);
 
 				for (int i = 0; i < fNumCells; i++)
 					cellType[i] = s[i] == 0.0 ? SOLID_CELL : AIR_CELL;
@@ -458,9 +427,9 @@ class FlipFluid {
 				float dx = component == 0 ? 0.0 : h2;
 				float dy = component == 0 ? h2 : 0.0;
 
-				float* f = component == 0 ? u : v;
-				float* prevF = component == 0 ? prevU : prevV;
-				float* d = component == 0 ? du : dv;
+				std::vector<float> f = component == 0 ? u : v;
+				std::vector<float> prevF = component == 0 ? prevU : prevV;
+				std::vector<float> d = component == 0 ? du : dv;
 
 				for (int i = 0; i < numParticles; i++) {
 					float x = particlePos[2 * i];
@@ -547,7 +516,7 @@ class FlipFluid {
 		*/
 		void solveIncompressibility(int numIters, float dt, float overRelaxation, bool compensateDrift = true) {
 
-			memset(p, 0, sizeof(float) * fNumCells);
+			fill(p.begin(), p.end(), 0);
 			copy(u, prevU, fNumCells);
 			copy(v, prevV, fNumCells);
 
@@ -679,7 +648,7 @@ class FlipFluid {
 		*/
 		void updateCellColors()
 		{
-			memset(cellColor, 0, sizeof(float) * 3 * fNumCells);
+			std::fill(cellColor.begin(), cellColor.end(), 0);
 
 			for (int i = 0; i < fNumCells; i++) {
 

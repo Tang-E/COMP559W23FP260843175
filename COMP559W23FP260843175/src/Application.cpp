@@ -291,9 +291,111 @@ void draw() {
 		GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, false, 0, 0));
 
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, gridColorBuffer));
-		GLCall(glBufferData(GL_ARRAY_BUFFER, fluid.cellColor, GL_DYNAMIC_DRAW));
+		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * fluid.cellColor.size(), &fluid.cellColor.front(), GL_DYNAMIC_DRAW));
 
+		GLCall(unsigned int colorLoc = glGetAttribLocation(pointShader, "attrColor"));
+		GLCall(glEnableVertexAttribArray(colorLoc));
+		GLCall(glVertexAttribPointer(colorLoc, 3, GL_FLOAT, false, 0, 0 ));
+
+		GLCall(glDrawArrays(GL_POINTS, 0, fluid.fNumCells));
+
+		GLCall(glDisableVertexAttribArray(posLoc));
+		GLCall(glDisableVertexAttribArray(colorLoc));
+
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
 	}
+
+	// Water
+	if (scene.showParticles) {
+		GLCall(glClear(GL_DEPTH_BUFFER_BIT));
+
+		double pointSize = 2.0 * fluid.particleRadius / simWidth * width;
+
+		GLCall(glUseProgram(pointShader));
+		GLCall(glUniform2f(glGetUniformLocation(pointShader, "domainSize"), simWidth, simHeight));
+		GLCall(glUniform1f(glGetUniformLocation(pointShader, "pointSize"), pointSize));
+		GLCall(glUniform1f(glGetUniformLocation(pointShader, "drawDisk"), 1.0));
+
+		if (pointVertexBuffer == -1) {
+			GLCall(glGenBuffers(1, &pointVertexBuffer));
+		}
+		if (pointColorBuffer == -1) {
+			GLCall(glGenBuffers(1, &pointColorBuffer));
+		}
+
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer));
+		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * fluid.particlePos.size(), &fluid.particlePos.front(), GL_DYNAMIC_DRAW));
+		
+		GLCall(unsigned int posLoc = glGetAttribLocation(pointShader, "attrPosition"));
+		GLCall(glEnableVertexAttribArray(posLoc));
+		GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, false, 0, 0));
+
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, pointColorBuffer));
+		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * fluid.particleColor.size(), &fluid.particleColor.front(), GL_DYNAMIC_DRAW));
+
+		GLCall(unsigned int colorLoc = glGetAttribLocation(pointShader, "attrColor"));
+		GLCall(glEnableVertexAttribArray(colorLoc));
+		GLCall(glVertexAttribPointer(colorLoc, 3, GL_FLOAT, false, 0, 0));
+
+		GLCall(glDrawArrays(GL_POINTS, 0, fluid.numParticles));
+
+		GLCall(glDisableVertexAttribArray(posLoc));
+		GLCall(glDisableVertexAttribArray(colorLoc));
+
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+	}
+
+	// Disk
+	
+	int numSegs = 50;
+	if (diskVertBuffer == -1) {
+		GLCall(glGenBuffers(1, &diskVertBuffer));
+		double dphi = 2.0 * 3.1415926535898 / numSegs;
+		float diskVerts[102];
+		int p = 0;
+		diskVerts[p++] = 0.0;
+		diskVerts[p++] = 0.0;
+		for (int i = 0; i < numSegs; i++) {
+			diskVerts[p++] = cos(i * dphi);
+			diskVerts[p++] = sin(i * dphi);
+		}
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, diskVertBuffer));
+		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 102, diskVerts, GL_DYNAMIC_DRAW));
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+
+		GLCall(glGenBuffers(1, &diskIdBuffer));
+		unsigned short diskIds[150];
+		p = 0;
+		for (int i = 0; i < numSegs; i++) {
+			diskIds[p++] = 0;
+			diskIds[p++] = 1 + i;
+			diskIds[p++] = 1 + (i + 1) % numSegs;
+		}
+		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, diskIdBuffer));
+		GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * 150, diskIds, GL_DYNAMIC_DRAW));
+		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+	}
+
+	GLCall(glClear(GL_DEPTH_BUFFER_BIT));
+
+	float diskColor[3] = { 1.0f, 0.0f, 0.0f };
+
+	GLCall(glUseProgram(meshShader));
+	GLCall(glUniform2f(glGetUniformLocation(meshShader, "domainSize"), simWidth, simHeight));
+	GLCall(glUniform3f(glGetUniformLocation(meshShader, "color"), diskColor[0], diskColor[1], diskColor[2]));
+	GLCall(glUniform2f(glGetUniformLocation(meshShader, "translation"), scene.obstacleX, scene.obstacleY));
+	GLCall(glUniform1f(glGetUniformLocation(meshShader, "scale"), scene.obstacleRadius + fluid.particleRadius));
+
+	GLCall(unsigned int posLoc = glGetAttribLocation(meshShader, "attrPosition"));
+	GLCall(glEnableVertexAttribArray(posLoc));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, diskVertBuffer));
+	GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, false, 0, 0));
+	
+	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, diskIdBuffer));
+	GLCall(glDrawElements(GL_TRIANGLES, 3 * numSegs, GL_UNSIGNED_SHORT, 0));
+
+	GLCall(glDisableVertexAttribArray(posLoc));
+
 
 
 	// DRAW CODE ENDS HERE
