@@ -9,7 +9,7 @@
 /*
 * Clamps value between min and max.
 */
-double clamp(double value, double min, double max) {
+float clamp(float value, float min, float max) {
 	if (value < min) {
 		return min;
 	}
@@ -24,23 +24,23 @@ double clamp(double value, double min, double max) {
 /*
 * Returns the greater of both values
 */
-double max(double value1, double value2) {
+float max(float value1, float value2) {
 	return (value1 > value2) ? value1 : value2;
 }
 
 /*
 * Returns the lesser of both values
 */
-double min(double value1, double value2) {
+float min(float value1, float value2) {
 	return (value1 < value2) ? value1 : value2;
 }
 
 /*
-* Provided the two pointers for two double arrays and
+* Provided the two pointers for two float arrays and
 * their lengths (LENGTHS MUST MATCH), copies entries
 * from the source array to the destination array.
 */
-void copy(double* srcArr, double* destArr, int length) {
+void copy(float* srcArr, float* destArr, int length) {
 	for (int i = 0; i < length; i++) {
 		destArr[i] = srcArr[i];
 	}

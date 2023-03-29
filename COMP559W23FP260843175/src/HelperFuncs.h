@@ -5,9 +5,9 @@
 #ifndef HELPERFUNCS_H
 #define HELPERFUNCS_H
 
-double clamp(double value, double min, double max);
-double max(double value1, double value2);
-double min(double value1, double value2);
-void copy(double* srcArr, double* destArr, int length);
+float clamp(float value, float min, float max);
+float max(float value1, float value2);
+float min(float value1, float value2);
+void copy(float* srcArr, float* destArr, int length);
 
 #endif

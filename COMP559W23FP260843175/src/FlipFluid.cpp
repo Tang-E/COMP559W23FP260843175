@@ -10,8 +10,8 @@
 * @author Edwin Pan (260843175) for COMP559 Winter 2023 Final Project
 *
 * Extra notes:
-*	I use memset() to fill arrays of double with zeros. It is not guaranteed that
-*	the float and double formatting produces 0 when all bits are false - and according
+*	I use memset() to fill arrays of float with zeros. It is not guaranteed that
+*	the float and float formatting produces 0 when all bits are false - and according
 *	to here https://stackoverflow.com/questions/4629853/is-it-legal-to-use-memset-0-on-an-array-of-doubles
 *	it is only true of "__STDC_IEC_559__" is defined. So we start with that.
 */
@@ -25,7 +25,7 @@
 
 class FlipFluid {
 
-	private:
+	public:
 
 		// Constants/Definitions
 
@@ -41,21 +41,21 @@ class FlipFluid {
 
 		// Fluid Properties
 
-		double density;
+		float density;
 		int fNumX;
 		int fNumY;
-		double h;
-		double fInvSpacing;
+		float h;
+		float fInvSpacing;
 		int fNumCells;
 
-		double* u;
-		double* v;
-		double* du;
-		double* dv;
-		double* prevU;
-		double* prevV;
-		double* p;
-		double* s;
+		float* u;
+		float* v;
+		float* du;
+		float* dv;
+		float* prevU;
+		float* prevV;
+		float* p;
+		float* s;
 		int* cellType;
 		float* cellColor;
 
@@ -63,14 +63,14 @@ class FlipFluid {
 
 		int maxParticles;
 
-		double* particlePos;
+		float* particlePos;
 		float* particleColor;
-		double* particleVel;
-		double* particleDensity;
-		double particleRestDensity;
+		float* particleVel;
+		float* particleDensity;
+		float particleRestDensity;
 
-		double particleRadius;
-		double pInvSpacing;
+		float particleRadius;
+		float pInvSpacing;
 		int pNumX;
 		int pNumY;
 		int pNumCells;
@@ -81,9 +81,7 @@ class FlipFluid {
 
 		int numParticles;
 
-	public:
-
-		FlipFluid(double density, int width, int height, double spacing, double particleRadius, int maxParticles, Scene* scene) {
+		FlipFluid(float density, int width, int height, float spacing, float particleRadius, int maxParticles, Scene* scene) {
 
 			// Pointer fields
 
@@ -98,14 +96,14 @@ class FlipFluid {
 			this->fInvSpacing = 1.0 / this->h;
 			this->fNumCells = this->fNumX * this->fNumY;
 
-			this->u = new double[fNumCells];
-			this->v = new double[fNumCells];
-			this->du = new double[fNumCells];
-			this->dv = new double[fNumCells];
-			this->prevU = new double[fNumCells];
-			this->prevV = new double[fNumCells];
-			this->p = new double[fNumCells];
-			this->s = new double[fNumCells];
+			this->u = new float[fNumCells];
+			this->v = new float[fNumCells];
+			this->du = new float[fNumCells];
+			this->dv = new float[fNumCells];
+			this->prevU = new float[fNumCells];
+			this->prevV = new float[fNumCells];
+			this->p = new float[fNumCells];
+			this->s = new float[fNumCells];
 			this->cellType = new int[fNumCells];
 			this->cellColor = new float[3 * fNumCells];
 
@@ -113,13 +111,13 @@ class FlipFluid {
 
 			this->maxParticles = maxParticles;
 
-			this->particlePos = new double[this->maxParticles];
+			this->particlePos = new float[this->maxParticles];
 			this->particleColor = new float[3 * this->maxParticles];
 			for (int i = 0; i < this->maxParticles; i++) {
 				this->particleColor[3 * i + 2] = 1.0; // Make blue, not white!
 			}
-			this->particleVel = new double[2 * this->maxParticles];
-			this->particleDensity = new double[this->fNumCells];
+			this->particleVel = new float[2 * this->maxParticles];
+			this->particleDensity = new float[this->fNumCells];
 			this->particleRestDensity = 0.0;
 
 			this->particleRadius = particleRadius;
@@ -136,7 +134,7 @@ class FlipFluid {
 
 			// Check for dependency regarding memset(), used in functions
 	#ifndef __STDC_IEC_559__ 
-			std::cout << "ALERT! float and double types do not match IEC60599 single format and memset() operations will fail!" << std::endl;
+			std::cout << "ALERT! float and float types do not match IEC60599 single format and memset() operations will fail!" << std::endl;
 	#endif
 
 		}
@@ -164,7 +162,7 @@ class FlipFluid {
 		/*
 		* Simplecton integrate particles with only gravity as force.
 		*/
-		void integrateParticles(double dt, double gravity)
+		void integrateParticles(float dt, float gravity)
 		{
 			for (int i = 0; i < numParticles; i++) {
 				particleVel[2 * i + 1] += dt * gravity;
@@ -184,15 +182,15 @@ class FlipFluid {
 		*/
 		void pushParticlesApart(int numIters)
 		{
-			double colorDiffusionCoeff = 0.001;
+			float colorDiffusionCoeff = 0.001;
 
 			// count particles per cell
 
-			std::memset(numCellParticles, 0, pNumCells * sizeof(double));
+			std::memset(numCellParticles, 0, pNumCells * sizeof(float));
 
 			for (int i = 0; i < numParticles; i++) {
-				double x = particlePos[2 * i];
-				double y = particlePos[2 * i + 1];
+				float x = particlePos[2 * i];
+				float y = particlePos[2 * i + 1];
 
 				int xi = clamp(floor(x * pInvSpacing), 0, pNumX - 1);
 				int yi = clamp(floor(y * pInvSpacing), 0, pNumY - 1);
@@ -213,8 +211,8 @@ class FlipFluid {
 			// fill particles into cells
 
 			for (int i = 0; i < numParticles; i++) {
-				double x = particlePos[2 * i];
-				double y = particlePos[2 * i + 1];
+				float x = particlePos[2 * i];
+				float y = particlePos[2 * i + 1];
 
 				int xi = clamp(floor(x * pInvSpacing), 0, pNumX - 1);
 				int yi = clamp(floor(y * pInvSpacing), 0, pNumY - 1);
@@ -225,17 +223,17 @@ class FlipFluid {
 
 			// push particles apart
 
-			double minDist = 2.0 * particleRadius;
-			double minDist2 = minDist * minDist;
+			float minDist = 2.0 * particleRadius;
+			float minDist2 = minDist * minDist;
 
 			for (int iter = 0; iter < numIters; iter++) {
 
 				for (int i = 0; i < numParticles; i++) {
-					double px = particlePos[2 * i];
-					double py = particlePos[2 * i + 1];
+					float px = particlePos[2 * i];
+					float py = particlePos[2 * i + 1];
 
-					double pxi = floor(px * pInvSpacing);
-					double pyi = floor(py * pInvSpacing);
+					float pxi = floor(px * pInvSpacing);
+					float pyi = floor(py * pInvSpacing);
 					int x0 = max(pxi - 1, 0);
 					int y0 = max(pyi - 1, 0);
 					int x1 = min(pxi + 1, pNumX - 1);
@@ -250,16 +248,16 @@ class FlipFluid {
 								int id = cellParticleIds[j];
 								if (id == i)
 									continue;
-								double qx = particlePos[2 * id];
-								double qy = particlePos[2 * id + 1];
+								float qx = particlePos[2 * id];
+								float qy = particlePos[2 * id + 1];
 
-								double dx = qx - px;
-								double dy = qy - py;
-								double d2 = dx * dx + dy * dy;
+								float dx = qx - px;
+								float dy = qy - py;
+								float d2 = dx * dx + dy * dy;
 								if (d2 > minDist2 || d2 == 0.0)
 									continue;
-								double d = sqrt(d2);
-								double s = 0.5 * (minDist - d) / d;
+								float d = sqrt(d2);
+								float s = 0.5 * (minDist - d) / d;
 								dx *= s;
 								dy *= s;
 								particlePos[2 * i] -= dx;
@@ -286,28 +284,28 @@ class FlipFluid {
 		/*
 		* Handles particle collisions with the obstacle
 		*/
-		void handleParticleCollisions(double obstacleX, double obstacleY, double obstacleRadius)
+		void handleParticleCollisions(float obstacleX, float obstacleY, float obstacleRadius)
 		{
-			double h = 1.0 / fInvSpacing;
-			double r = particleRadius;
-			double or1 = obstacleRadius;
-			double or2 = or1 * or1;
-			double minDist = obstacleRadius + r;
-			double minDist2 = minDist * minDist;
+			float h = 1.0 / fInvSpacing;
+			float r = particleRadius;
+			float or1 = obstacleRadius;
+			float or2 = or1 * or1;
+			float minDist = obstacleRadius + r;
+			float minDist2 = minDist * minDist;
 
-			double minX = h + r;
-			double maxX = (fNumX - 1) * h - r;
-			double minY = h + r;
-			double maxY = (fNumY - 1) * h - r;
+			float minX = h + r;
+			float maxX = (fNumX - 1) * h - r;
+			float minY = h + r;
+			float maxY = (fNumY - 1) * h - r;
 
 
 			for (int i = 0; i < numParticles; i++) {
-				double x = particlePos[2 * i];
-				double y = particlePos[2 * i + 1];
+				float x = particlePos[2 * i];
+				float y = particlePos[2 * i + 1];
 
-				double dx = x - obstacleX;
-				double dy = y - obstacleY;
-				double d2 = dx * dx + dy * dy;
+				float dx = x - obstacleX;
+				float dy = y - obstacleY;
+				float d2 = dx * dx + dy * dy;
 
 				// obstacle collision
 
@@ -354,32 +352,32 @@ class FlipFluid {
 		void updateParticleDensity()
 		{
 			int n = fNumY;
-			double h = h;
-			double h1 = fInvSpacing;
-			double h2 = 0.5 * h;
+			float h = h;
+			float h1 = fInvSpacing;
+			float h2 = 0.5 * h;
 
-			//double d = particleDensity;
+			//float d = particleDensity;
 			//d.fill(0.0);
-			double* d = new double[fNumCells];
-			memset(d, 0, sizeof(double) * fNumCells);
+			float* d = new float[fNumCells];
+			memset(d, 0, sizeof(float) * fNumCells);
 
 			for (int i = 0; i < numParticles; i++) {
-				double x = particlePos[2 * i];
-				double y = particlePos[2 * i + 1];
+				float x = particlePos[2 * i];
+				float y = particlePos[2 * i + 1];
 
 				x = clamp(x, h, (fNumX - 1) * h);
 				y = clamp(y, h, (fNumY - 1) * h);
 
 				int x0 = floor((x - h2) * h1);
-				double tx = ((x - h2) - x0 * h) * h1;
+				float tx = ((x - h2) - x0 * h) * h1;
 				int x1 = min(x0 + 1, fNumX - 2);
 
 				int y0 = floor((y - h2) * h1);
-				double ty = ((y - h2) - y0 * h) * h1;
+				float ty = ((y - h2) - y0 * h) * h1;
 				int y1 = min(y0 + 1, fNumY - 2);
 
-				double sx = 1.0 - tx;
-				double sy = 1.0 - ty;
+				float sx = 1.0 - tx;
+				float sy = 1.0 - ty;
 
 				if (x0 < fNumX && y0 < fNumY) d[x0 * n + y0] += sx * sy;
 				if (x1 < fNumX && y0 < fNumY) d[x1 * n + y0] += tx * sy;
@@ -388,7 +386,7 @@ class FlipFluid {
 			}
 
 			if (particleRestDensity == 0.0) {
-				double sum = 0.0;
+				float sum = 0.0;
 				int numFluidCells = 0;
 
 				for (int i = 0; i < fNumCells; i++) {
@@ -427,26 +425,26 @@ class FlipFluid {
 		void transferVelocities(bool toGrid, float flipRatio)
 		{
 			int n = fNumY;
-			double h = h;
-			double h1 = fInvSpacing;
-			double h2 = 0.5 * h;
+			float h = h;
+			float h1 = fInvSpacing;
+			float h2 = 0.5 * h;
 
 			if (toGrid) {
 
 				copy(u, prevU, fNumCells);
 				copy(v, prevV, fNumCells);
 
-				memset(du, 0, sizeof(double) * fNumCells);
-				memset(dv, 0, sizeof(double) * fNumCells);
-				memset(u, 0, sizeof(double) * fNumCells);
-				memset(v, 0, sizeof(double) * fNumCells);
+				memset(du, 0, sizeof(float) * fNumCells);
+				memset(dv, 0, sizeof(float) * fNumCells);
+				memset(u, 0, sizeof(float) * fNumCells);
+				memset(v, 0, sizeof(float) * fNumCells);
 
 				for (int i = 0; i < fNumCells; i++)
 					cellType[i] = s[i] == 0.0 ? SOLID_CELL : AIR_CELL;
 
 				for (int i = 0; i < numParticles; i++) {
-					double x = particlePos[2 * i];
-					double y = particlePos[2 * i + 1];
+					float x = particlePos[2 * i];
+					float y = particlePos[2 * i + 1];
 					int xi = clamp(floor(x * h1), 0, fNumX - 1);
 					int yi = clamp(floor(y * h1), 0, fNumY - 1);
 					int cellNr = xi * n + yi;
@@ -457,35 +455,35 @@ class FlipFluid {
 
 			for (int component = 0; component < 2; component++) {
 
-				double dx = component == 0 ? 0.0 : h2;
-				double dy = component == 0 ? h2 : 0.0;
+				float dx = component == 0 ? 0.0 : h2;
+				float dy = component == 0 ? h2 : 0.0;
 
-				double* f = component == 0 ? u : v;
-				double* prevF = component == 0 ? prevU : prevV;
-				double* d = component == 0 ? du : dv;
+				float* f = component == 0 ? u : v;
+				float* prevF = component == 0 ? prevU : prevV;
+				float* d = component == 0 ? du : dv;
 
 				for (int i = 0; i < numParticles; i++) {
-					double x = particlePos[2 * i];
-					double y = particlePos[2 * i + 1];
+					float x = particlePos[2 * i];
+					float y = particlePos[2 * i + 1];
 
 					x = clamp(x, h, (fNumX - 1) * h);
 					y = clamp(y, h, (fNumY - 1) * h);
 
 					int x0 = min(floor((x - dx) * h1), fNumX - 2);
-					double tx = ((x - dx) - x0 * h) * h1;
+					float tx = ((x - dx) - x0 * h) * h1;
 					int x1 = min(x0 + 1, fNumX - 2);
 
 					int y0 = min(floor((y - dy) * h1), fNumY - 2);
-					double ty = ((y - dy) - y0 * h) * h1;
+					float ty = ((y - dy) - y0 * h) * h1;
 					int y1 = min(y0 + 1, fNumY - 2);
 
-					double sx = 1.0 - tx;
-					double sy = 1.0 - ty;
+					float sx = 1.0 - tx;
+					float sy = 1.0 - ty;
 
-					double d0 = sx * sy;
-					double d1 = tx * sy;
-					double d2 = tx * ty;
-					double d3 = sx * ty;
+					float d0 = sx * sy;
+					float d1 = tx * sy;
+					float d2 = tx * ty;
+					float d3 = sx * ty;
 
 					int nr0 = x0 * n + y0;
 					int nr1 = x1 * n + y0;
@@ -493,7 +491,7 @@ class FlipFluid {
 					int nr3 = x0 * n + y1;
 
 					if (toGrid) {
-						double  pv = particleVel[2 * i + component];
+						float  pv = particleVel[2 * i + component];
 						f[nr0] += pv * d0;  d[nr0] += d0;
 						f[nr1] += pv * d1;  d[nr1] += d1;
 						f[nr2] += pv * d2;  d[nr2] += d2;
@@ -501,20 +499,20 @@ class FlipFluid {
 					}
 					else {
 						int offset = component == 0 ? n : 1;
-						double valid0 = cellType[nr0] != AIR_CELL || cellType[nr0 - offset] != AIR_CELL ? 1.0 : 0.0;
-						double valid1 = cellType[nr1] != AIR_CELL || cellType[nr1 - offset] != AIR_CELL ? 1.0 : 0.0;
-						double valid2 = cellType[nr2] != AIR_CELL || cellType[nr2 - offset] != AIR_CELL ? 1.0 : 0.0;
-						double valid3 = cellType[nr3] != AIR_CELL || cellType[nr3 - offset] != AIR_CELL ? 1.0 : 0.0;
+						float valid0 = cellType[nr0] != AIR_CELL || cellType[nr0 - offset] != AIR_CELL ? 1.0 : 0.0;
+						float valid1 = cellType[nr1] != AIR_CELL || cellType[nr1 - offset] != AIR_CELL ? 1.0 : 0.0;
+						float valid2 = cellType[nr2] != AIR_CELL || cellType[nr2 - offset] != AIR_CELL ? 1.0 : 0.0;
+						float valid3 = cellType[nr3] != AIR_CELL || cellType[nr3 - offset] != AIR_CELL ? 1.0 : 0.0;
 
-						double v = particleVel[2 * i + component];
-						double d = valid0 * d0 + valid1 * d1 + valid2 * d2 + valid3 * d3;
+						float v = particleVel[2 * i + component];
+						float d = valid0 * d0 + valid1 * d1 + valid2 * d2 + valid3 * d3;
 
 						if (d > 0.0) {
 
-							double picV = (valid0 * d0 * f[nr0] + valid1 * d1 * f[nr1] + valid2 * d2 * f[nr2] + valid3 * d3 * f[nr3]) / d;
-							double corr = (valid0 * d0 * (f[nr0] - prevF[nr0]) + valid1 * d1 * (f[nr1] - prevF[nr1])
+							float picV = (valid0 * d0 * f[nr0] + valid1 * d1 * f[nr1] + valid2 * d2 * f[nr2] + valid3 * d3 * f[nr3]) / d;
+							float corr = (valid0 * d0 * (f[nr0] - prevF[nr0]) + valid1 * d1 * (f[nr1] - prevF[nr1])
 								+ valid2 * d2 * (f[nr2] - prevF[nr2]) + valid3 * d3 * (f[nr3] - prevF[nr3])) / d;
-							double flipV = v + corr;
+							float flipV = v + corr;
 
 							particleVel[2 * i + component] = (1.0 - flipRatio) * picV + flipRatio * flipV;
 						}
@@ -547,18 +545,18 @@ class FlipFluid {
 		* grid element and reducing divergence to 0 at every pass with the
 		* ability to undershoot or overshoot with overRelaxation term.
 		*/
-		void solveIncompressibility(int numIters, double dt, double overRelaxation, bool compensateDrift = true) {
+		void solveIncompressibility(int numIters, float dt, float overRelaxation, bool compensateDrift = true) {
 
-			memset(p, 0, sizeof(double) * fNumCells);
+			memset(p, 0, sizeof(float) * fNumCells);
 			copy(u, prevU, fNumCells);
 			copy(v, prevV, fNumCells);
 
 			int n = fNumY;
-			double cp = density * h / dt;
+			float cp = density * h / dt;
 
 			for (int i = 0; i < fNumCells; i++) { //wtf does this do for us??????
-				double u = this->u[i];
-				double v = this->v[i];
+				float u = this->u[i];
+				float v = this->v[i];
 			}
 
 			for (int iter = 0; iter < numIters; iter++) {
@@ -575,26 +573,26 @@ class FlipFluid {
 						int bottom = i * n + j - 1;
 						int top = i * n + j + 1;
 
-						double s = this->s[center];
-						double sx0 = this->s[left];
-						double sx1 = this->s[right];
-						double sy0 = this->s[bottom];
-						double sy1 = this->s[top];
+						float s = this->s[center];
+						float sx0 = this->s[left];
+						float sx1 = this->s[right];
+						float sy0 = this->s[bottom];
+						float sy1 = this->s[top];
 						s = sx0 + sx1 + sy0 + sy1;
 						if (s == 0.0)
 							continue;
 
-						double div = u[right] - u[center] +
+						float div = u[right] - u[center] +
 							v[top] - v[center];
 
 						if (particleRestDensity > 0.0 && compensateDrift) {
-							double k = 1.0;
-							double compression = particleDensity[i * n + j] - particleRestDensity;
+							float k = 1.0;
+							float compression = particleDensity[i * n + j] - particleRestDensity;
 							if (compression > 0.0)
 								div = div - k * compression;
 						}
 
-						double p = -div / s;
+						float p = -div / s;
 						p *= overRelaxation;
 						this->p[center] += cp * p;
 
@@ -621,28 +619,28 @@ class FlipFluid {
 
 			// return;
 
-			double h1 = fInvSpacing;
+			float h1 = fInvSpacing;
 
 			for (int i = 0; i < numParticles; i++) {
 
-				double s = 0.01;
+				float s = 0.01;
 
 				particleColor[3 * i] = clamp(particleColor[3 * i] - s, 0.0, 1.0);
 				particleColor[3 * i + 1] = clamp(particleColor[3 * i + 1] - s, 0.0, 1.0);
 				particleColor[3 * i + 2] = clamp(particleColor[3 * i + 2] + s, 0.0, 1.0);
 
-				double x = particlePos[2 * i];
-				double y = particlePos[2 * i + 1];
+				float x = particlePos[2 * i];
+				float y = particlePos[2 * i + 1];
 				int xi = clamp(floor(x * h1), 1, fNumX - 1);
 				int yi = clamp(floor(y * h1), 1, fNumY - 1);
 				int cellNr = xi * fNumY + yi;
 
-				double d0 = particleRestDensity;
+				float d0 = particleRestDensity;
 
 				if (d0 > 0.0) {
-					double relDensity = particleDensity[cellNr] / d0;
+					float relDensity = particleDensity[cellNr] / d0;
 					if (relDensity < 0.7) {
-						double s = 0.8;
+						float s = 0.8;
 						particleColor[3 * i] = s;
 						particleColor[3 * i + 1] = s;
 						particleColor[3 * i + 2] = 1.0;
@@ -654,15 +652,15 @@ class FlipFluid {
 		/*
 		* Helper Function: Updates the colour of the specific cell based on val
 		*/
-		void setSciColor(int cellNr, double val, double minVal, double maxVal)
+		void setSciColor(int cellNr, float val, float minVal, float maxVal)
 		{
 			val = min(max(val, minVal), maxVal - 0.0001);
-			double d = maxVal - minVal;
+			float d = maxVal - minVal;
 			val = d == 0.0 ? 0.5 : (val - minVal) / d;
-			double m = 0.25;
+			float m = 0.25;
 			int num = floor(val / m);
-			double s = (val - num * m) / m;
-			double r, g, b;
+			float s = (val - num * m) / m;
+			float r, g, b;
 
 			switch (num) {
 			case 0: r = 0.0; g = s; b = 1.0; break;
@@ -691,7 +689,7 @@ class FlipFluid {
 					cellColor[3 * i + 2] = 0.5;
 				}
 				else if (cellType[i] == FLUID_CELL) {
-					double d = particleDensity[i];
+					float d = particleDensity[i];
 					if (particleRestDensity > 0.0)
 						d /= particleRestDensity;
 					setSciColor(i, d, 0.0, 2.0);
@@ -702,10 +700,10 @@ class FlipFluid {
 		/*
 		* Moves the FLIP water simulation one dt-seconds forward.
 		*/
-		void simulate(double dt, double gravity, float flipRatio, int numPressureIters, int numParticleIters, double overRelaxation, bool compensateDrift, bool separateParticles, double obstacleX, double abstacleY, double obstacleRadius)
+		void simulate(float dt, float gravity, float flipRatio, int numPressureIters, int numParticleIters, float overRelaxation, bool compensateDrift, bool separateParticles, float obstacleX, float abstacleY, float obstacleRadius)
 		{
 			int numSubSteps = 1;
-			double sdt = dt / numSubSteps;
+			float sdt = dt / numSubSteps;
 
 			for (int step = 0; step < numSubSteps; step++) {
 				integrateParticles(sdt, gravity);

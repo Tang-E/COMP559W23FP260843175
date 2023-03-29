@@ -10,21 +10,72 @@
 
 #include "includes.h"
 #include "OpenGlHelpers.h"
+#include "Scene.h"
+#include "FlipFluid.h"
 
 
+
+ /*
+ * ========================================================================================================================
+ *	Function Declarations
+ * ========================================================================================================================
+ */
 
 #define ASSERT(x) if (!(x)) __debugbreak();
+void setupSceneAndFlipFluid();
+void setObstacle(float x, float y, bool reset);
+void startDrag(float x, float y);
+void drag(float x, float y);
+void endDrag();
+
+void toggleStart();
+void simulate();
+void update();
+
+void draw();
 
 
 
+ /*
+ * ========================================================================================================================
+ *	Main Constants and Variables
+ * ========================================================================================================================
+ */
+
+int width = 1920;
+int height = 1080;
+float simHeight = 3.0f;
+float cScale = height / simHeight;
+float simWidth = width / cScale;
+
+bool mouseDown = false;
+
+GLFWwindow* window;
+Scene scene;
+FlipFluid fluid;
+
+unsigned int pointShader = -1;
+unsigned int meshShader = -1;
+unsigned int pointVertexBuffer = -1;
+unsigned int pointColorBuffer = -1;
+unsigned int gridVertexBuffer = -1;
+unsigned int gridColorBuffer = -1;
+unsigned int diskVertBuffer = -1;
+unsigned int diskIdBuffer = -1;
+
+
+
+
+/*
+* ========================================================================================================================
+*	Main Function
+* ========================================================================================================================
+*/
 int main() {
 
-	GLFWwindow* window;
 
 	/* Initialize GLFW */
-	if (!glfwInit()) {
-		return -1;
-	}
+	if (!glfwInit()) {return -1;}
 
 	/* Create a windowed mode window and its OpenGL context */
 	window = glfwCreateWindow(1024, 768, "COMP559 Winter 2023 Final Project 260843175", NULL, NULL);
@@ -32,7 +83,6 @@ int main() {
 		glfwTerminate();
 		return -1;
 	}
-
 	// Mark current flgw context and initialize glew
 	glfwMakeContextCurrent(window);
 	if (glewInit() != GLEW_OK) {
@@ -41,70 +91,212 @@ int main() {
 	}
 	std::cout << glGetString(GL_VERSION) << std::endl;
 
-	/* Provide Data about Stuff To Render */
-	float positions[] = {
-		-0.5f, -0.5f, //0
-		 0.5f, -0.5f, //1
-		 0.5f,  0.5f, //2
-		-0.5f,  0.5f, //3
-	};
-	unsigned int indices[] = {
-		0, 1, 2,
-		2, 3, 0,
-	};
-	// Vertex Buffer
-	unsigned int buffer;
-	glGenBuffers(1, &buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, buffer); // Select this buffer for rendering next
-	glNamedBufferData(buffer, 8 * sizeof(float), positions, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (const void*)0);
-	// Index Buffer
-	unsigned int ibo; // Index Buffer Object
-	glGenBuffers(1, &ibo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo); // Select this buffer for rendering next
-	glNamedBufferData(ibo, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW);
-	// Shader 
-	ShaderProgramSource source = ParseShader("res/shaders/basic.shader");
-	std::cout << "Vertex Source:" << std::endl;
-	std::cout << source.VertexSource << std::endl;
-	std::cout << "Fragment Source:" << std::endl;
-	std::cout << source.FragmentSource << std::endl;
-	unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-	glUseProgram(shader);
-
-	float r = 0.0f;
-	float rIncrement = 0.05f;
-	GLCall(int location = glGetUniformLocation(shader, "u_Color"));
-	ASSERT(location != -1);
-	GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
-
-
 	// Rendering loop
 	while (!glfwWindowShouldClose(window)) {
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
-		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
-
-		r += rIncrement;
-		if (r >= 1) {
-			r = 1;
-			rIncrement *= -1;
-		}
-		else if (r <= 0) {
-			r = 0;
-			rIncrement *= -1;
-		}
-
-		glfwSwapBuffers(window);
-		glfwPollEvents();
+		update();
 	}
 
 	// Clean up
-	glDeleteProgram(shader);
+	//glDeleteProgram(shader);
 
 	glfwTerminate();
 	return 0;
 
+}
+
+
+
+/*
+* ========================================================================================================================
+*	Function Definitions
+* ========================================================================================================================
+*/
+
+void setupSceneAndFlipFluid() {
+	scene.obstacleRadius = 0.15;
+	scene.overRelaxation = 1.9;
+
+	scene.dt = 1.0 / 60.0;
+	scene.numPressureIters = 50;
+	scene.numParticleIters = 2;
+
+	int res = 100;
+
+	float tankHeight = 1.0 * simHeight;
+	float tankWidth = 1.0 * simWidth;
+	float h = tankHeight / res;
+	float density = 1000.0;
+
+	float relWaterHeight = 0.8;
+	float relWaterWidth = 0.6;
+
+	// dam break
+
+	// compute number of particles
+
+	float r = 0.3 * h;	// particle radius w.r.t. cell size
+	float dx = 2.0 * r;
+	float dy = sqrt(3.0) / 2.0 * dx;
+
+	int numX = floor((relWaterWidth * tankWidth - 2.0 * h - 2.0 * r) / dx);
+	int numY = floor((relWaterHeight * tankHeight - 2.0 * h - 2.0 * r) / dy);
+	int maxParticles = numX * numY;
+
+	// create fluid
+
+	fluid = FlipFluid(density, tankWidth, tankHeight, h, r, maxParticles, &scene );
+
+	// create particles
+
+	fluid.numParticles = numX * numY;
+	int p = 0;
+	for (int i = 0; i < numX; i++) {
+		for (int j = 0; j < numY; j++) {
+			fluid.particlePos[p++] = h + r + dx * i + (j % 2 == 0 ? 0.0 : r);
+			fluid.particlePos[p++] = h + r + dy * j;
+		}
+	}
+
+	// setup grid cells for tank
+
+	int n = fluid.fNumY;
+
+	for (int i = 0; i < fluid.fNumX; i++) {
+		for (int j = 0; j < fluid.fNumY; j++) {
+			float s = 1.0;	// fluid
+			if (i == 0 || i == fluid.fNumX - 1 || j == 0)
+				s = 0.0;	// solid
+			fluid.s[i * n + j] = s;
+		}
+	}
+
+	setObstacle(3.0, 2.0, true);
+}
+
+void setObstacle(float x, float y, bool reset) {
+	float vx = 0.0;
+	float vy = 0.0;
+
+	if (!reset) {
+		vx = (x - scene.obstacleX) / scene.dt;
+		vy = (y - scene.obstacleY) / scene.dt;
+	}
+
+	scene.obstacleX = x;
+	scene.obstacleY = y;
+	float r = scene.obstacleRadius;
+	int n = fluid.fNumY;
+	float cd = sqrt(2) * fluid.h;
+
+	for (int i = 1; i < fluid.fNumX - 2; i++) {
+		for (int j = 1; j < fluid.fNumY - 2; j++) {
+
+			fluid.s[i * n + j] = 1.0;
+
+			float dx = (i + 0.5) * fluid.h - x;
+			float dy = (j + 0.5) * fluid.h - y;
+
+			if (dx * dx + dy * dy < r * r) {
+				fluid.s[i * n + j] = 0.0;
+				fluid.u[i * n + j] = vx;
+				fluid.u[(i + 1) * n + j] = vx;
+				fluid.v[i * n + j] = vy;
+				fluid.v[i * n + j + 1] = vy;
+			}
+		}
+	}
+
+	scene.showObstacle = true;
+	scene.obstacleVelX = vx;
+	scene.obstacleVelY = vy;
+}
+
+void startDrag(float x, float y) {
+
+}
+
+void drag(float x, float y) {
+
+}
+
+void endDrag() {
+
+}
+
+void toggleStart() {
+	scene.paused = !scene.paused;
+}
+
+void simulate() {
+	if (!scene.paused) {
+		fluid.simulate(
+			scene.dt, scene.gravity, scene.flipRatio, scene.numPressureIters, scene.numParticleIters,
+			scene.overRelaxation, scene.compensateDrift, scene.separateParticles,
+			scene.obstacleX, scene.obstacleY, scene.obstacleRadius);
+		scene.frameNr++;
+	}
+}
+
+void update() {
+	simulate();
+	draw();
+}
+
+void draw() {
+	glClear(GL_COLOR_BUFFER_BIT); // Clear
+	// DRAW CODE STARTS HERE
+
+	//Prepare Shaders
+	if (pointShader == -1) {
+		ShaderProgramSource pointSources = ParseShader("res/shaders/point.shader");
+		pointShader = CreateShader(pointSources.VertexSource, pointSources.FragmentSource);
+	}
+	if (meshShader == -1) {
+		ShaderProgramSource meshSources = ParseShader("res/shaders/mesh.shader");
+		meshShader = CreateShader(meshSources.VertexSource, meshSources.FragmentSource);
+	}
+
+	// Grid
+	if (gridVertexBuffer == -1) {
+
+		float* cellCenters = new float[2 * fluid.fNumCells];
+		int p = 0;
+		for (int i = 0; i < fluid.fNumX; i++) {
+			for (int j = 0; j < fluid.fNumY; j++) {
+				cellCenters[p++] = (i + 0.5) * fluid.h;
+				cellCenters[p++] = (j + 0.5) * fluid.h;
+			}
+		}
+
+		GLCall(glGenBuffers(1, &gridVertexBuffer));
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, gridVertexBuffer));
+		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 2 * fluid.fNumCells, cellCenters, GL_DYNAMIC_DRAW));
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0)); //Assume '0' equivalent to null
+
+	}
+	if (gridColorBuffer == -1) {
+		GLCall(glGenBuffers(1, &gridColorBuffer));
+	}
+	if (scene.showGrid) {
+		float pointSize = 0.9 * fluid.h / simWidth * width;
+
+		GLCall(glUseProgram(pointShader));
+		GLCall(glUniform2f(glGetUniformLocation(pointShader, "domainSize"), simWidth, simHeight));
+		GLCall(glUniform1f(glGetUniformLocation(pointShader, "pointSize"), pointSize));
+		GLCall(glUniform1f(glGetUniformLocation(pointShader, "drawDisk"), 0.0f));
+
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, gridVertexBuffer));
+		GLCall(unsigned int posLoc = glGetAttribLocation(pointShader, "attrPosition"));
+		GLCall(glEnableVertexAttribArray(posLoc));
+		GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, false, 0, 0));
+
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, gridColorBuffer));
+		GLCall(glBufferData(GL_ARRAY_BUFFER, fluid.cellColor, GL_DYNAMIC_DRAW));
+
+	}
+
+
+	// DRAW CODE ENDS HERE
+	glfwSwapBuffers(window); // Buffer Swap
+	glfwPollEvents(); // Poll for Events
 }
