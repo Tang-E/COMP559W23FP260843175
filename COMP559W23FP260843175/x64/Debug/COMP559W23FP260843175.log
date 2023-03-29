@@ -1,3 +1,0 @@
-﻿  Application.cpp
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.34.31933\include\filesystem(13): warning STL4038: The contents of <filesystem> are available only with C++17 or later.
-  COMP559W23FP260843175.vcxproj -> F:\Homework\COMP559-Fundamentals_of_Computer_Animation\Project\COMP559W23FP260843175\x64\Debug\COMP559W23FP260843175.exe

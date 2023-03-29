@@ -6,11 +6,6 @@
 * @author Edwin Pan (260843175) for COMP559 Winter 2023 Final Project
 */
 
-#ifndef HELPER_FUNCTIONS
-#define HELPER_FUNCTIONS
-
-
-
 /*
 * Clamps value between min and max.
 */
@@ -50,7 +45,3 @@ void copy(double* srcArr, double* destArr, int length) {
 		destArr[i] = srcArr[i];
 	}
 }
-
-
-
-#endif

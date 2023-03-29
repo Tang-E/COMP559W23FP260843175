@@ -54,5 +54,3 @@ class Scene {
 		}
 
 };
-
-Scene scene;

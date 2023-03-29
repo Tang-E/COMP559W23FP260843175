@@ -6,29 +6,16 @@
 * @author Edwin Pan (260843175) for COMP559 Winter 2023 Final Project
 */
 
-#ifndef OPENGL_HELPER_FUNCTIONS
-#define OPENGL_HELPER_FUNCTIONS
-
-
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <filesystem>
-
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
+#include "includes.h"
 
 
 #define GLCall(x) GLClearError (); x; ASSERT(GLLogCall(#x, __FILE__, __LINE__))
 
-static void GLClearError() {
+void GLClearError() {
 	while (glGetError() != GL_NO_ERROR);
 }
 
-static bool GLLogCall(const char* function, const char* file, int line) {
+bool GLLogCall(const char* function, const char* file, int line) {
 	while (GLenum error = glGetError()) {
 		std::cout << "[OpenGL Error] (" << error << "): " << function << " " << file << ":" << line << std::endl;
 		return false;
@@ -41,7 +28,7 @@ struct ShaderProgramSource {
 	std::string FragmentSource;
 };
 
-static ShaderProgramSource ParseShader(const std::string& filepath) {
+ShaderProgramSource ParseShader(const std::string& filepath) {
 	// Open file
 	std::ifstream stream(filepath);
 	// Set up shader source buffers
@@ -72,7 +59,7 @@ static ShaderProgramSource ParseShader(const std::string& filepath) {
 	return { ss[0].str(), ss[1].str() };
 }
 
-static unsigned int CompileShader(unsigned int type, const std::string& source) {
+unsigned int CompileShader(unsigned int type, const std::string& source) {
 	// Initialize, prepare source, and compile shader
 	unsigned int id = glCreateShader(type);
 	const char* src = source.c_str();
@@ -84,17 +71,18 @@ static unsigned int CompileShader(unsigned int type, const std::string& source) 
 	if (result == GL_FALSE) {
 		int length;
 		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-		char* message = (char*)alloca(length * sizeof(char));
+		char* message = (char*)malloc(length * sizeof(char));
 		glGetShaderInfoLog(id, length, &length, message);
 		std::cout << "Failed to compile " << (type == GL_VERTEX_SHADER ? "vertex" : "fragment") << " shader" << std::endl;
 		std::cout << message << std::endl;
+		free(message);
 		glDeleteShader(id);
 	}
 	// Return shader
 	return id;
 }
 
-static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader) {
+unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader) {
 	unsigned int program = glCreateProgram();
 	unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
 	unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
@@ -109,8 +97,3 @@ static unsigned int CreateShader(const std::string& vertexShader, const std::str
 	// Return the shader
 	return program;
 }
-
-
-
-
-#endif
