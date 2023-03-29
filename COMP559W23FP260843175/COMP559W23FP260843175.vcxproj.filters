@@ -18,7 +18,7 @@
     <ClCompile Include="src\Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Simulator.cpp">
+    <ClCompile Include="src\FlipFluid.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Scene.cpp">
@@ -35,6 +35,7 @@
     <None Include="res\shaders\basic.shader" />
     <None Include="res\shaders\point.shader" />
     <None Include="res\shaders\mesh.shader" />
+    <None Include=".gitignore" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\HelperFuncs.h">
@@ -46,7 +47,7 @@
     <ClInclude Include="src\Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Simulator.h">
+    <ClInclude Include="src\FlipFluid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\includes.h">

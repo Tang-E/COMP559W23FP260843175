@@ -137,9 +137,10 @@
     <ClCompile Include="src\HelperFuncs.cpp" />
     <ClCompile Include="src\OpenGLHelpers.cpp" />
     <ClCompile Include="src\Scene.cpp" />
-    <ClCompile Include="src\Simulator.cpp" />
+    <ClCompile Include="src\FlipFluid.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".gitignore" />
     <None Include="res\shaders\basic.shader" />
     <None Include="res\shaders\mesh.shader" />
     <None Include="res\shaders\point.shader" />
@@ -149,7 +150,7 @@
     <ClInclude Include="src\includes.h" />
     <ClInclude Include="src\OpenGLHelpers.h" />
     <ClInclude Include="src\Scene.h" />
-    <ClInclude Include="src\Simulator.h" />
+    <ClInclude Include="src\FlipFluid.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
