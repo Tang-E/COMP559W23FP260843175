@@ -1,4 +1,4 @@
-﻿/**
+﻿/*
  *	COMP559 Winter 2023 Final Project
  *	Submission by Edwin Pan 260843175
  *
@@ -18,95 +18,9 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
+#include "OpenGlHelpers.cpp"
 
 #define ASSERT(x) if (!(x)) __debugbreak();
-#define GLCall(x) GLClearError (); x; ASSERT(GLLogCall(#x, __FILE__, __LINE__))
-
-static void GLClearError() {
-	while (glGetError() != GL_NO_ERROR);
-}
-
-static bool GLLogCall(const char* function, const char* file, int line) {
-	while (GLenum error = glGetError()) {
-		std::cout << "[OpenGL Error] (" << error << "): " << function << " " << file << ":" << line << std::endl;
-		return false;
-	}
-	return true;
-}
-
-struct ShaderProgramSource {
-	std::string VertexSource;
-	std::string FragmentSource;
-};
-
-static ShaderProgramSource ParseShader(const std::string& filepath) {
-	// Open file
-	std::ifstream stream(filepath);
-	// Set up shader source buffers
-	enum class ShaderType {
-		NONE = -1, VERTEX = 0, FRAGMENT = 1
-	};
-	std::stringstream ss[2];
-	ShaderType type = ShaderType::NONE;
-	// Extract shader sources from file
-	std::string line;
-	while (getline(stream, line)) {
-		if (line.find("#shader") != std::string::npos) {
-			if (line.find("vertex") != std::string::npos) {
-				// set mode to vertex
-				type = ShaderType::VERTEX;
-			}
-			else if (line.find("fragment") != std::string::npos) {
-				// set mode to fragment
-				type = ShaderType::FRAGMENT;
-
-			}
-		}
-		else if (type!=ShaderType::NONE) {
-			ss[(int)type] << line << '\n';
-		}
-	}
-	// return shader sources
-	return { ss[0].str(), ss[1].str() };
-}
-
-static unsigned int CompileShader(unsigned int type, const std::string& source) {
-	// Initialize, prepare source, and compile shader
-	unsigned int id = glCreateShader(type);
-	const char* src = source.c_str();
-	glShaderSource(id, 1, &src, nullptr);
-	glCompileShader(id);
-	// Query for errors
-	int result;
-	glGetShaderiv(id, GL_COMPILE_STATUS, &result);
-	if (result == GL_FALSE) {
-		int length;
-		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-		char* message = (char*)alloca(length * sizeof(char));
-		glGetShaderInfoLog(id, length, &length, message);
-		std::cout << "Failed to compile " << (type==GL_VERTEX_SHADER?"vertex":"fragment") << " shader" << std::endl;
-		std::cout << message << std::endl;
-		glDeleteShader(id);
-	}
-	// Return shader
-	return id;
-}
-
-static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader) {
-	unsigned int program = glCreateProgram();
-	unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
-	unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
-	// Assemble
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-	glLinkProgram(program);
-	glValidateProgram(program);
-	// Delete shaders as parts, keeping program and keeping source code
-	glDeleteShader(vs);
-	glDeleteShader(fs);
-	// Return the shader
-	return program;
-}
 
 
 
