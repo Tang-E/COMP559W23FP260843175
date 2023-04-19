@@ -4,6 +4,7 @@
  *
  *	Simulator code reference is Matthias M�ller's online "Ten Minute Physics" resource, particularly their video on "How to write a FLIP water / fluid simulation" - youtube https://www.youtube.com/watch?v=XmzBREkK8kY and github https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/18-flip.html .
  *	Instead of reverse engineering opengl code provided for assignments I figured I'd just take an opengl tutorial starting here https://www.youtube.com/watch?v=OR4fNpBjmq8&list=PLlrATfBNZ98foTJPJ_Ev03o2oq3-GGOS2&index=2
+ *	Used https://www.glfw.org/docs/3.3/input_guide.html as reference for how to get user inputs.
  *
  */
 
@@ -21,18 +22,20 @@
  * ========================================================================================================================
  */
 
-#define ASSERT(x) if (!(x)) __debugbreak();
-void setupSceneAndFlipFluid();
+// Initialization-Related
+void finishSceneFluidSetup();
+// Simulation Related
 void setObstacle(float x, float y, bool reset);
-void startDrag(float x, float y);
-void drag(float x, float y);
-void endDrag();
-
 void toggleStart();
 void simulate();
-void update();
-
+// User-Input Related
+void mousePositionCallback(GLFWwindow* window, double x, double y);
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+void keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+// Graphics Related
 void draw();
+void drawFluids();
+void drawUI();
 
 
 
@@ -60,20 +63,19 @@ unsigned int diskIdBuffer = -1;
  * ========================================================================================================================
  */
 
+// Window and 2D Scene Properties
+GLFWwindow* window;
+Scene scene;
 int width = 1920;
 int height = 1080;
 float simHeight = 3.0f;
 float cScale = height / simHeight;
 float simWidth = width / cScale;
 
+// UI Property
 bool mouseDown = false;
 
-GLFWwindow* window;
-Scene scene;
-/*
-* FLIP Fluid Object Initialization
-*/
-//FlipFluid fluid;
+// Sim Physical Properties SET UP
 int res = 100;
 float tankHeight = 1.0 * simHeight;
 float tankWidth = 1.0 * simWidth;
@@ -81,14 +83,14 @@ float h = tankHeight / res;
 float density = 1000.0;
 float relWaterHeight = 0.8;
 float relWaterWidth = 0.6;
-// compute number of particles
+// Particle Properties SET UP
 float r = 0.3 * h;	// particle radius w.r.t. cell size
 float dx = 2.0 * r;
 float dy = sqrt(3.0) / 2.0 * dx;
 int numX = floor((relWaterWidth * tankWidth - 2.0 * h - 2.0 * r) / dx);
 int numY = floor((relWaterHeight * tankHeight - 2.0 * h - 2.0 * r) / dy);
 int maxParticles = numX * numY;
-// create fluid
+// Fluid-Encompassing Object Instantiation SET UP
 FlipFluid fluid = FlipFluid(density, tankWidth, tankHeight, h, r, maxParticles, &scene);
 
 
@@ -100,38 +102,14 @@ FlipFluid fluid = FlipFluid(density, tankWidth, tankHeight, h, r, maxParticles, 
 * ========================================================================================================================
 */
 int main() {
-
 	/* Initialize Simulator Variables */
-	//setupSceneAndFlipFluid();
-	scene.obstacleRadius = 0.15;
-	scene.overRelaxation = 1.9;
-	scene.dt = 1.0 / 60.0;
-	scene.numPressureIters = 50;
-	scene.numParticleIters = 2;
-	fluid.numParticles = numX * numY;
-	int p = 0;
-	for (int i = 0; i < numX; i++) {
-		for (int j = 0; j < numY; j++) {
-			fluid.particlePos[p++] = h + r + dx * i + (j % 2 == 0 ? 0.0 : r);
-			fluid.particlePos[p++] = h + r + dy * j;
-		}
-	}
-	int n = fluid.fNumY;
-	for (int i = 0; i < fluid.fNumX; i++) {
-		for (int j = 0; j < fluid.fNumY; j++) {
-			float s = 1.0;	// fluid
-			if (i == 0 || i == fluid.fNumX - 1 || j == 0)
-				s = 0.0;	// solid
-			fluid.s[i * n + j] = s;
-		}
-	}
-	setObstacle(3.0, 2.0, true);
+	finishSceneFluidSetup();
 
 	/* Initialize GLFW */
 	if (!glfwInit()) {return -1;}
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(1024, 768, "COMP559 Winter 2023 Final Project 260843175", NULL, NULL);
+	window = glfwCreateWindow(width, height, "COMP559 Winter 2023 Final Project 260843175", NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		return -1;
@@ -144,18 +122,25 @@ int main() {
 	}
 	std::cout << glGetString(GL_VERSION) << std::endl;
 
+	// Assign User Input Behaviours
+	glfwSetKeyCallback(window, keyboardKeyCallback);
+	glfwSetCursorPosCallback(window, mousePositionCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+
 	// Initialize Shaders
 	pointShader = ParseAndCreateShader("res/shaders/point.shader");
 	meshShader = ParseAndCreateShader("res/shaders/mesh.shader");
 
 	// Rendering loop
 	while (!glfwWindowShouldClose(window)) {
-		update();
+		std::cout << "Working on frame number " << scene.frameNr << "." << std::endl;
+		simulate();
+		draw();
 	}
 
 	// Clean up
-	//glDeleteProgram(shader);
-
+	glDeleteProgram(pointShader);
+	glDeleteProgram(meshShader);
 	glfwTerminate();
 	return 0;
 
@@ -169,43 +154,21 @@ int main() {
 * ========================================================================================================================
 */
 
-/*
-void setupSceneAndFlipFluid() {
+/// <summary>
+/// Wraps up Scene and Fluid object setup.
+/// Based on setupScene() in Matthia Muller's code, but that method
+/// had to be split up in this C++ re-implementation C++ wants to
+/// immediately initialize the FlipFluid object the moment it is called,
+/// which caused compile-time errors in C++. Section of the original
+/// setupScene() have thus been split up to before the main function
+/// call among variable declarations and this method.
+/// </summary>
+void finishSceneFluidSetup() {
 	scene.obstacleRadius = 0.15;
 	scene.overRelaxation = 1.9;
-
 	scene.dt = 1.0 / 60.0;
 	scene.numPressureIters = 50;
 	scene.numParticleIters = 2;
-
-	int res = 100;
-
-	float tankHeight = 1.0 * simHeight;
-	float tankWidth = 1.0 * simWidth;
-	float h = tankHeight / res;
-	float density = 1000.0;
-
-	float relWaterHeight = 0.8;
-	float relWaterWidth = 0.6;
-
-	// dam break
-
-	// compute number of particles
-
-	float r = 0.3 * h;	// particle radius w.r.t. cell size
-	float dx = 2.0 * r;
-	float dy = sqrt(3.0) / 2.0 * dx;
-
-	int numX = floor((relWaterWidth * tankWidth - 2.0 * h - 2.0 * r) / dx);
-	int numY = floor((relWaterHeight * tankHeight - 2.0 * h - 2.0 * r) / dy);
-	int maxParticles = numX * numY;
-
-	// create fluid
-
-	fluid = FlipFluid(density, tankWidth, tankHeight, h, r, maxParticles, &scene );
-
-	// create particles
-
 	fluid.numParticles = numX * numY;
 	int p = 0;
 	for (int i = 0; i < numX; i++) {
@@ -214,11 +177,7 @@ void setupSceneAndFlipFluid() {
 			fluid.particlePos[p++] = h + r + dy * j;
 		}
 	}
-
-	// setup grid cells for tank
-
 	int n = fluid.fNumY;
-
 	for (int i = 0; i < fluid.fNumX; i++) {
 		for (int j = 0; j < fluid.fNumY; j++) {
 			float s = 1.0;	// fluid
@@ -227,11 +186,17 @@ void setupSceneAndFlipFluid() {
 			fluid.s[i * n + j] = s;
 		}
 	}
-
 	setObstacle(3.0, 2.0, true);
 }
-*/
 
+/// <summary>
+/// Updates the position of the obstacle to position x and y.
+/// Updates the velocity of the obstacle unless reset is true.
+/// If reset is true, then velocity of the obstacle is zeroed.
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="reset"></param>
 void setObstacle(float x, float y, bool reset) {
 	float vx = 0.0;
 	float vy = 0.0;
@@ -270,22 +235,16 @@ void setObstacle(float x, float y, bool reset) {
 	scene.obstacleVelY = vy;
 }
 
-void startDrag(float x, float y) {
-
-}
-
-void drag(float x, float y) {
-
-}
-
-void endDrag() {
-
-}
-
+/// <summary>
+/// Pauses or Resumes the scene.
+/// </summary>
 void toggleStart() {
 	scene.paused = !scene.paused;
 }
 
+/// <summary>
+/// Calls for the calculation of the next frame of the simulation.
+/// </summary>
 void simulate() {
 	if (!scene.paused) {
 		fluid.simulate(
@@ -296,25 +255,85 @@ void simulate() {
 	}
 }
 
-void update() {
-	simulate();
-	draw();
+/// <summary>
+/// Mouse Position Update callback. Updates the position of the obstacle
+/// if mouse is currently pressed.
+/// Based on the `function drag(x, y)` code in Matthia's code.
+/// Adapted for C++ GLFW via https://www.glfw.org/docs/3.3/input_guide.html
+/// </summary>
+/// <param name="window"></param>
+/// <param name="x"></param>
+/// <param name="y"></param>
+void mousePositionCallback(GLFWwindow* window, double x, double y) {
+	if (mouseDown) {
+		setObstacle(x / cScale, y / cScale, false);
+	}
 }
 
+/// <summary>
+/// Mouse Button Input callback. Starts or finishes the dragging of the obstacle
+/// Based on `function startDrag(x, y)` and `function endDrag()` in Matthia's code.
+/// Adapted for C++ GLFW via https://www.glfw.org/docs/3.3/input_guide.html
+/// Also this stackoverflow page helps with getting xpos ypos since our
+/// signature does not itself give this info: https://stackoverflow.com/questions/45130391/opengl-get-cursor-coordinate-on-mouse-click-in-c
+/// </summary>
+/// <param name="window"></param>
+/// <param name="x"></param>
+/// <param name="y"></param>
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+		// If left press
+		double x, y;
+		glfwGetCursorPos(window, &x, &y);
+		setObstacle(x/cScale, y/cScale, true);
+		mouseDown = true;
+
+	}
+	else if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+		// If left release
+		scene.obstacleVelX = 0.0f;
+		scene.obstacleVelY = 0.0f;
+		mouseDown = false;
+
+	}
+}
+
+/// <summary>
+/// Keyboard Key Input callback. Handles keyboard inputs.
+/// </summary>
+/// <param name="window"></param>
+/// <param name="key"></param>
+/// <param name="scancode"></param>
+/// <param name="action"></param>
+/// <param name="mods"></param>
+void keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+		toggleStart();
+	}
+}
+
+/// <summary>
+/// Handles the generation of a new frame.
+/// </summary>
 void draw() {
 	glClear(GL_COLOR_BUFFER_BIT); // Clear
 	// DRAW CODE STARTS HERE
 
-	//Prepare Shaders
-	if (pointShader == -1) {
-		ShaderProgramSource pointSources = ParseShader("res/shaders/point.shader");
-		pointShader = CreateShader(pointSources.VertexSource, pointSources.FragmentSource);
-	}
-	if (meshShader == -1) {
-		ShaderProgramSource meshSources = ParseShader("res/shaders/mesh.shader");
-		meshShader = CreateShader(meshSources.VertexSource, meshSources.FragmentSource);
-	}
+	drawUI();
+	drawFluids();
 
+	// DRAW CODE ENDS HERE
+	glfwSwapBuffers(window); // Buffer Swap
+	glfwPollEvents(); // Poll for Events
+}
+
+/// <summary>
+/// OpenGL Draw Submethod. Synonymous with Matthias Muller's draw() method,
+/// but rewritten in C++. Combines code from Matthia's repository as well as
+/// youtube The Cherno's tutorial series on fundamentals of OpenGL in C++.
+/// Does not clear nor swap buffers. Should be used within draw().
+/// </summary>
+void drawFluids() {
 	// Grid
 	if (gridVertexBuffer == -1) {
 
@@ -354,7 +373,7 @@ void draw() {
 
 		GLCall(unsigned int colorLoc = glGetAttribLocation(pointShader, "attrColor"));
 		GLCall(glEnableVertexAttribArray(colorLoc));
-		GLCall(glVertexAttribPointer(colorLoc, 3, GL_FLOAT, false, 0, 0 ));
+		GLCall(glVertexAttribPointer(colorLoc, 3, GL_FLOAT, false, 0, 0));
 
 		GLCall(glDrawArrays(GL_POINTS, 0, fluid.fNumCells));
 
@@ -384,7 +403,7 @@ void draw() {
 
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer));
 		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * fluid.particlePos.size(), &fluid.particlePos.front(), GL_DYNAMIC_DRAW));
-		
+
 		GLCall(unsigned int posLoc = glGetAttribLocation(pointShader, "attrPosition"));
 		GLCall(glEnableVertexAttribArray(posLoc));
 		GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, false, 0, 0));
@@ -405,7 +424,7 @@ void draw() {
 	}
 
 	// Disk
-	
+
 	int numSegs = 50;
 	if (diskVertBuffer == -1) {
 		GLCall(glGenBuffers(1, &diskVertBuffer));
@@ -449,15 +468,16 @@ void draw() {
 	GLCall(glEnableVertexAttribArray(posLoc));
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, diskVertBuffer));
 	GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, false, 0, 0));
-	
+
 	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, diskIdBuffer));
 	GLCall(glDrawElements(GL_TRIANGLES, 3 * numSegs, GL_UNSIGNED_SHORT, 0));
 
 	GLCall(glDisableVertexAttribArray(posLoc));
+}
 
+/// <summary>
+/// OpenGL Draw Submethod in charge of UI elements.
+/// </summary>
+void drawUI() {
 
-
-	// DRAW CODE ENDS HERE
-	glfwSwapBuffers(window); // Buffer Swap
-	glfwPollEvents(); // Poll for Events
 }
