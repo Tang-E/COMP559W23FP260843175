@@ -2,6 +2,9 @@
 * Simulator Code header file
 */
 
+#include "includes.h"
+#include "Scene.h"
+
 #ifndef FLIPFLUID_H
 #define FLIPFLUID_H
 
@@ -57,6 +60,7 @@ class FlipFluid {
 
 		// Operations
 
+		FlipFluid();
 		FlipFluid(float density, int width, int height, float spacing, float particleRadius, int maxParticles, Scene* scene);
 		void integrateParticles(float dt, float gravity);
 		void pushParticlesApart(int numIters);

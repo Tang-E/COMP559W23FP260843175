@@ -75,6 +75,8 @@ class FlipFluid {
 
 		int numParticles;
 
+		FlipFluid() {}
+
 		FlipFluid(float density, int width, int height, float spacing, float particleRadius, int maxParticles, Scene* scene) {
 
 			// Pointer fields
@@ -327,8 +329,7 @@ class FlipFluid {
 
 			//float d = particleDensity;
 			//d.fill(0.0);
-			std::vector<float> d(fNumCells);
-			std::fill(d.begin(), d.end(), 0);
+			std::vector<float> d(fNumCells, 0);
 
 			for (int i = 0; i < numParticles; i++) {
 				float x = particlePos[2 * i];
@@ -403,10 +404,10 @@ class FlipFluid {
 				copy(u, prevU, fNumCells);
 				copy(v, prevV, fNumCells);
 
-				std::fill(du.begin(), du.end(), 0);
-				std::fill(dv.begin(), dv.end(), 0);
-				std::fill(u.begin(), u.end(), 0);
-				std::fill(v.begin(), v.end(), 0);
+				std::fill(du.begin(), du.end(), 0.0f);
+				std::fill(dv.begin(), dv.end(), 0.0f);
+				std::fill(u.begin(), u.end(), 0.0f);
+				std::fill(v.begin(), v.end(), 0.0f);
 
 				for (int i = 0; i < fNumCells; i++)
 					cellType[i] = s[i] == 0.0 ? SOLID_CELL : AIR_CELL;
@@ -516,7 +517,7 @@ class FlipFluid {
 		*/
 		void solveIncompressibility(int numIters, float dt, float overRelaxation, bool compensateDrift = true) {
 
-			fill(p.begin(), p.end(), 0);
+			std::fill(p.begin(), p.end(), 0.0f);
 			copy(u, prevU, fNumCells);
 			copy(v, prevV, fNumCells);
 
@@ -648,7 +649,7 @@ class FlipFluid {
 		*/
 		void updateCellColors()
 		{
-			std::fill(cellColor.begin(), cellColor.end(), 0);
+			std::fill(cellColor.begin(), cellColor.end(), 0.0f);
 
 			for (int i = 0; i < fNumCells; i++) {
 

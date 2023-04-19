@@ -21,9 +21,6 @@
     <ClCompile Include="src\FlipFluid.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Scene.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\HelperFuncs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -73,6 +73,8 @@ unsigned int diskIdBuffer = -1;
 */
 int main() {
 
+	/* Initialize Simulator Variables */
+	setupSceneAndFlipFluid();
 
 	/* Initialize GLFW */
 	if (!glfwInit()) {return -1;}
