@@ -97,3 +97,17 @@ unsigned int CreateShader(const std::string& vertexShader, const std::string& fr
 	// Return the shader
 	return program;
 }
+
+/*
+* Because why didn't The Cherno on youtube just make it a single function?
+*/
+unsigned int ParseAndCreateShader(const std::string& filepath) {
+	std::cout << "Reading in shader source code at " << filepath << std::endl;
+	ShaderProgramSource source = ParseShader(filepath);
+	std::cout << "Vertex Source:" << std::endl;
+	std::cout << source.VertexSource << std::endl;
+	std::cout << "Fragment Source:" << std::endl;
+	std::cout << source.FragmentSource << std::endl;
+	return CreateShader(source.VertexSource, source.FragmentSource);
+}
+

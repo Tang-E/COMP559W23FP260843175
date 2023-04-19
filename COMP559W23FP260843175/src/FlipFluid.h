@@ -59,8 +59,6 @@ class FlipFluid {
 		int numParticles;
 
 		// Operations
-
-		FlipFluid();
 		FlipFluid(float density, int width, int height, float spacing, float particleRadius, int maxParticles, Scene* scene);
 		void integrateParticles(float dt, float gravity);
 		void pushParticlesApart(int numIters);

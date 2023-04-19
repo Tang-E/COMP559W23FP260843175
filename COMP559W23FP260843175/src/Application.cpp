@@ -11,7 +11,7 @@
 #include "includes.h"
 #include "OpenGlHelpers.h"
 #include "Scene.h"
-#include "FlipFluid.h"
+#include "FlipFluid.cpp"
 
 
 
@@ -36,6 +36,24 @@ void draw();
 
 
 
+/*
+* ========================================================================================================================
+*	Graphics Variables
+* ========================================================================================================================
+*/
+
+// Shaders must be initialized after GLEW is initialized
+unsigned int pointShader = -1;
+unsigned int meshShader = -1;
+unsigned int pointVertexBuffer = -1;
+unsigned int pointColorBuffer = -1;
+unsigned int gridVertexBuffer = -1;
+unsigned int gridColorBuffer = -1;
+unsigned int diskVertBuffer = -1;
+unsigned int diskIdBuffer = -1;
+
+
+
  /*
  * ========================================================================================================================
  *	Main Constants and Variables
@@ -52,16 +70,26 @@ bool mouseDown = false;
 
 GLFWwindow* window;
 Scene scene;
-FlipFluid fluid;
-
-unsigned int pointShader = -1;
-unsigned int meshShader = -1;
-unsigned int pointVertexBuffer = -1;
-unsigned int pointColorBuffer = -1;
-unsigned int gridVertexBuffer = -1;
-unsigned int gridColorBuffer = -1;
-unsigned int diskVertBuffer = -1;
-unsigned int diskIdBuffer = -1;
+/*
+* FLIP Fluid Object Initialization
+*/
+//FlipFluid fluid;
+int res = 100;
+float tankHeight = 1.0 * simHeight;
+float tankWidth = 1.0 * simWidth;
+float h = tankHeight / res;
+float density = 1000.0;
+float relWaterHeight = 0.8;
+float relWaterWidth = 0.6;
+// compute number of particles
+float r = 0.3 * h;	// particle radius w.r.t. cell size
+float dx = 2.0 * r;
+float dy = sqrt(3.0) / 2.0 * dx;
+int numX = floor((relWaterWidth * tankWidth - 2.0 * h - 2.0 * r) / dx);
+int numY = floor((relWaterHeight * tankHeight - 2.0 * h - 2.0 * r) / dy);
+int maxParticles = numX * numY;
+// create fluid
+FlipFluid fluid = FlipFluid(density, tankWidth, tankHeight, h, r, maxParticles, &scene);
 
 
 
@@ -74,7 +102,30 @@ unsigned int diskIdBuffer = -1;
 int main() {
 
 	/* Initialize Simulator Variables */
-	setupSceneAndFlipFluid();
+	//setupSceneAndFlipFluid();
+	scene.obstacleRadius = 0.15;
+	scene.overRelaxation = 1.9;
+	scene.dt = 1.0 / 60.0;
+	scene.numPressureIters = 50;
+	scene.numParticleIters = 2;
+	fluid.numParticles = numX * numY;
+	int p = 0;
+	for (int i = 0; i < numX; i++) {
+		for (int j = 0; j < numY; j++) {
+			fluid.particlePos[p++] = h + r + dx * i + (j % 2 == 0 ? 0.0 : r);
+			fluid.particlePos[p++] = h + r + dy * j;
+		}
+	}
+	int n = fluid.fNumY;
+	for (int i = 0; i < fluid.fNumX; i++) {
+		for (int j = 0; j < fluid.fNumY; j++) {
+			float s = 1.0;	// fluid
+			if (i == 0 || i == fluid.fNumX - 1 || j == 0)
+				s = 0.0;	// solid
+			fluid.s[i * n + j] = s;
+		}
+	}
+	setObstacle(3.0, 2.0, true);
 
 	/* Initialize GLFW */
 	if (!glfwInit()) {return -1;}
@@ -92,6 +143,10 @@ int main() {
 		return -2;
 	}
 	std::cout << glGetString(GL_VERSION) << std::endl;
+
+	// Initialize Shaders
+	pointShader = ParseAndCreateShader("res/shaders/point.shader");
+	meshShader = ParseAndCreateShader("res/shaders/mesh.shader");
 
 	// Rendering loop
 	while (!glfwWindowShouldClose(window)) {
@@ -114,6 +169,7 @@ int main() {
 * ========================================================================================================================
 */
 
+/*
 void setupSceneAndFlipFluid() {
 	scene.obstacleRadius = 0.15;
 	scene.overRelaxation = 1.9;
@@ -174,6 +230,7 @@ void setupSceneAndFlipFluid() {
 
 	setObstacle(3.0, 2.0, true);
 }
+*/
 
 void setObstacle(float x, float y, bool reset) {
 	float vx = 0.0;

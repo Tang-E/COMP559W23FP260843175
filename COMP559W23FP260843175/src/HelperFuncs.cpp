@@ -34,14 +34,3 @@ float max(float value1, float value2) {
 float min(float value1, float value2) {
 	return (value1 < value2) ? value1 : value2;
 }
-
-/*
-* Provided the two pointers for two float arrays and
-* their lengths (LENGTHS MUST MATCH), copies entries
-* from the source array to the destination array.
-*/
-void copy(float* srcArr, float* destArr, int length) {
-	for (int i = 0; i < length; i++) {
-		destArr[i] = srcArr[i];
-	}
-}

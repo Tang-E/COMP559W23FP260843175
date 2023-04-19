@@ -75,8 +75,6 @@ class FlipFluid {
 
 		int numParticles;
 
-		FlipFluid() {}
-
 		FlipFluid(float density, int width, int height, float spacing, float particleRadius, int maxParticles, Scene* scene) {
 
 			// Pointer fields
@@ -323,7 +321,7 @@ class FlipFluid {
 		void updateParticleDensity()
 		{
 			int n = fNumY;
-			float h = h;
+			float h = this->h;
 			float h1 = fInvSpacing;
 			float h2 = 0.5 * h;
 
@@ -395,14 +393,14 @@ class FlipFluid {
 		void transferVelocities(bool toGrid, float flipRatio)
 		{
 			int n = fNumY;
-			float h = h;
+			float h = this->h;
 			float h1 = fInvSpacing;
 			float h2 = 0.5 * h;
 
 			if (toGrid) {
 
-				copy(u, prevU, fNumCells);
-				copy(v, prevV, fNumCells);
+				u = prevU;
+				v = prevV;
 
 				std::fill(du.begin(), du.end(), 0.0f);
 				std::fill(dv.begin(), dv.end(), 0.0f);
@@ -518,8 +516,8 @@ class FlipFluid {
 		void solveIncompressibility(int numIters, float dt, float overRelaxation, bool compensateDrift = true) {
 
 			std::fill(p.begin(), p.end(), 0.0f);
-			copy(u, prevU, fNumCells);
-			copy(v, prevV, fNumCells);
+			u = prevU;
+			v = prevV;
 
 			int n = fNumY;
 			float cp = density * h / dt;
