@@ -90,28 +90,28 @@ class FlipFluid {
 			this->fInvSpacing = 1.0 / this->h;
 			this->fNumCells = this->fNumX * this->fNumY;
 
-			this->u.reserve(fNumCells);
-			this->v.reserve(fNumCells);
-			this->du.reserve(fNumCells);
-			this->dv.reserve(fNumCells);
-			this->prevU.reserve(fNumCells);
-			this->prevV.reserve(fNumCells);
-			this->p.reserve(fNumCells);
-			this->s.reserve(fNumCells);
-			this->cellType.reserve(fNumCells);
-			this->cellColor.reserve(3 * fNumCells);
+			this->u.resize(fNumCells);
+			this->v.resize(fNumCells);
+			this->du.resize(fNumCells);
+			this->dv.resize(fNumCells);
+			this->prevU.resize(fNumCells);
+			this->prevV.resize(fNumCells);
+			this->p.resize(fNumCells);
+			this->s.resize(fNumCells);
+			this->cellType.resize(fNumCells);
+			this->cellColor.resize(3 * fNumCells);
 
 			// Particle Properties
 
 			this->maxParticles = maxParticles;
 
-			this->particlePos.reserve(this->maxParticles);
-			this->particleColor.reserve(3 * this->maxParticles);
+			this->particlePos.resize(2 * this->maxParticles);
+			this->particleColor.resize(3 * this->maxParticles);
 			for (int i = 0; i < this->maxParticles; i++) {
 				this->particleColor[3 * i + 2] = 1.0; // Make blue, not white!
 			}
-			this->particleVel.reserve(2 * this->maxParticles);
-			this->particleDensity.reserve(this->fNumCells);
+			this->particleVel.resize(2 * this->maxParticles);
+			this->particleDensity.resize(this->fNumCells);
 			this->particleRestDensity = 0.0;
 
 			this->particleRadius = particleRadius;
@@ -120,9 +120,9 @@ class FlipFluid {
 			this->pNumY = floor(height * this->pInvSpacing) + 1;
 			this->pNumCells = this->pNumX * this->pNumY;
 
-			this->numCellParticles.reserve(this->pNumCells);
-			this->firstCellParticle.reserve(this->pNumCells + 1);
-			this->cellParticleIds.reserve(this->maxParticles);
+			this->numCellParticles.resize(this->pNumCells);
+			this->firstCellParticle.resize(this->pNumCells + 1);
+			this->cellParticleIds.resize(this->maxParticles);
 
 			this->numParticles = 0;
 
