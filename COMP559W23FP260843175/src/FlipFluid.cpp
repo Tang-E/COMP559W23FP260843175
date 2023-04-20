@@ -670,10 +670,15 @@ class FlipFluid {
 		*/
 		void simulate(float dt, float gravity, float flipRatio, int numPressureIters, int numParticleIters, float overRelaxation, bool compensateDrift, bool separateParticles, float obstacleX, float abstacleY, float obstacleRadius)
 		{
+			std::cout << "<SIMULATE> Received a call for simulate." << std::endl;
+
 			int numSubSteps = 1;
 			float sdt = dt / numSubSteps;
 
 			for (int step = 0; step < numSubSteps; step++) {
+
+				std::cout << "<SIMULATE> Working on substep " << step << " of " << numSubSteps << std::endl;
+
 				integrateParticles(sdt, gravity);
 				if (separateParticles)
 					pushParticlesApart(numParticleIters);
@@ -683,6 +688,8 @@ class FlipFluid {
 				solveIncompressibility(numPressureIters, sdt, overRelaxation, compensateDrift);
 				transferVelocities(false, flipRatio);
 			}
+
+			std::cout << "<SIMULATE> Finished all substeps. Updating colours." << std::endl;
 
 			updateParticleColors();
 			updateCellColors();

@@ -13,6 +13,9 @@
 #include "OpenGlHelpers.h"
 #include "Scene.h"
 #include "FlipFluid.cpp"
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 
 
 
@@ -76,7 +79,7 @@ float simWidth = width / cScale;
 bool mouseDown = false;
 
 // Sim Physical Properties SET UP
-int res = 100;
+int res = 10;
 float tankHeight = 1.0 * simHeight;
 float tankWidth = 1.0 * simWidth;
 float h = tankHeight / res;
@@ -164,11 +167,13 @@ int main() {
 /// call among variable declarations and this method.
 /// </summary>
 void finishSceneFluidSetup() {
+	// Scene Properties
 	scene.obstacleRadius = 0.15;
 	scene.overRelaxation = 1.9;
 	scene.dt = 1.0 / 60.0;
 	scene.numPressureIters = 50;
 	scene.numParticleIters = 2;
+	// Particle Initial Conditions
 	fluid.numParticles = numX * numY;
 	int p = 0;
 	for (int i = 0; i < numX; i++) {
@@ -177,6 +182,7 @@ void finishSceneFluidSetup() {
 			fluid.particlePos[p++] = h + r + dy * j;
 		}
 	}
+	// Fluid Grid Setup
 	int n = fluid.fNumY;
 	for (int i = 0; i < fluid.fNumX; i++) {
 		for (int j = 0; j < fluid.fNumY; j++) {
@@ -186,6 +192,7 @@ void finishSceneFluidSetup() {
 			fluid.s[i * n + j] = s;
 		}
 	}
+	// Set Obstacle Initial Position
 	setObstacle(3.0, 2.0, true);
 }
 
@@ -266,7 +273,7 @@ void simulate() {
 /// <param name="y"></param>
 void mousePositionCallback(GLFWwindow* window, double x, double y) {
 	if (mouseDown) {
-		setObstacle(x / cScale, y / cScale, false);
+		setObstacle(x / cScale, (height - y) / cScale, false);
 	}
 }
 
@@ -285,11 +292,12 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 		// If left press
 		double x, y;
 		glfwGetCursorPos(window, &x, &y);
+		y = height - y;
 		setObstacle(x/cScale, y/cScale, true);
 		mouseDown = true;
 
 	}
-	else if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+	else if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
 		// If left release
 		scene.obstacleVelX = 0.0f;
 		scene.obstacleVelY = 0.0f;
@@ -477,7 +485,28 @@ void drawFluids() {
 
 /// <summary>
 /// OpenGL Draw Submethod in charge of UI elements.
+/// THIS FUNCTION IS BASED ON CODE PROVIDED TO US 
+/// FOR ASSIGNEMNT 3 AS `fluid.cpp`.
 /// </summary>
 void drawUI() {
-
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+	ImGui::Begin("Scene Settings");
+	ImGui::Text("Shortkeys:\n\tSpace\t- pause/resume");
+	ImGui::Checkbox("Paused", &scene.paused);
+	ImGui::Text("Frame Number: &7i", &scene.frameNr);
+	ImGui::SliderFloat("g", &scene.gravity, -25.0f, 25.0f);
+	ImGui::SliderFloat("dt", &scene.dt, 0.0f, 1.0f);
+	ImGui::SliderFloat("flipRatio", &scene.flipRatio, 0.0f, 1.0f);
+	ImGui::SliderInt("numPressureIters", &scene.numPressureIters, 0, 200);
+	ImGui::SliderInt("numParticleIters", &scene.numParticleIters, 0, 10);
+	ImGui::SliderFloat("overRelaxation", &scene.overRelaxation, 0.0f, 2.0f);
+	ImGui::Checkbox("Drift Compensation", &scene.compensateDrift);
+	ImGui::Checkbox("Separate Particles", &scene.separateParticles);
+	ImGui::Checkbox("Show Obstacle", &scene.showObstacle);
+	ImGui::Checkbox("Show Particles", &scene.showParticles);
+	ImGui::Checkbox("Show Grid", &scene.showGrid);
+	ImGui::End();
+	ImGui::Render();
 }
