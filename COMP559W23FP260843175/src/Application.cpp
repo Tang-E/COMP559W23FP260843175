@@ -129,8 +129,9 @@ int main() {
 	glfwSetCursorPosCallback(window, mousePositionCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
-
 	// Initialize ImGUI based on https://www.youtube.com/watch?v=VRwhNKoxUtk
+	// Annoyingly, this MUST be after glfwSetXCallbacks are called, because
+	// otherwise ImGUI will ignore all user inputs.
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
@@ -335,19 +336,19 @@ void keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int action, 
 /// </summary>
 void draw() {
 	glClear(GL_COLOR_BUFFER_BIT); // Clear
-	// DRAW CODE STARTS HERE
-
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+	// DRAW CODE STARTS HERE
+
 
 	drawFluids();
 	drawUI();
 
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	// DRAW CODE ENDS HERE
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	glfwSwapBuffers(window); // Buffer Swap
 	glfwPollEvents(); // Poll for Events
 }
@@ -359,6 +360,11 @@ void draw() {
 /// Does not clear nor swap buffers. Should be used within draw().
 /// </summary>
 void drawFluids() {
+
+	std::cout << "<Application.draw()> Begun drawing." << std::endl;
+
+	GLCall(glViewport(0, 0, width, height));
+
 	// Grid
 	if (gridVertexBuffer == -1) {
 
@@ -376,9 +382,13 @@ void drawFluids() {
 		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 2 * fluid.fNumCells, cellCenters, GL_DYNAMIC_DRAW));
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0)); //Assume '0' equivalent to null
 
+		delete[] cellCenters;
+
+		std::cout << "<Application.draw()> Grid Vertex Buffer initialized." << std::endl;
 	}
 	if (gridColorBuffer == -1) {
 		GLCall(glGenBuffers(1, &gridColorBuffer));
+		std::cout << "<Application.draw()> Grid Color Buffer initialized." << std::endl;
 	}
 	if (scene.showGrid) {
 		float pointSize = 0.9 * fluid.h / simWidth * width;
@@ -406,6 +416,8 @@ void drawFluids() {
 		GLCall(glDisableVertexAttribArray(colorLoc));
 
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+
+		std::cout << "<Application.draw()> Grid shown." << std::endl;
 	}
 
 	// Water
@@ -421,9 +433,11 @@ void drawFluids() {
 
 		if (pointVertexBuffer == -1) {
 			GLCall(glGenBuffers(1, &pointVertexBuffer));
+			std::cout << "<Application.draw()> Point Vertex Buffer initialized." << std::endl;
 		}
 		if (pointColorBuffer == -1) {
 			GLCall(glGenBuffers(1, &pointColorBuffer));
+			std::cout << "<Application.draw()> Point Colour Buffer initialized" << std::endl;
 		}
 
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer));
@@ -446,6 +460,8 @@ void drawFluids() {
 		GLCall(glDisableVertexAttribArray(colorLoc));
 
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+
+		std::cout << "<Application.draw()> Particles shown." << std::endl;
 	}
 
 	// Disk
@@ -477,27 +493,34 @@ void drawFluids() {
 		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, diskIdBuffer));
 		GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * 150, diskIds, GL_DYNAMIC_DRAW));
 		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+
+		std::cout << "<Application.draw()> Disk Vertex Buffer initialized." << std::endl;
+	}
+	if (scene.showObstacle) {
+		GLCall(glClear(GL_DEPTH_BUFFER_BIT));
+
+		float diskColor[3] = { 1.0f, 0.0f, 0.0f };
+
+		GLCall(glUseProgram(meshShader));
+		GLCall(glUniform2f(glGetUniformLocation(meshShader, "domainSize"), simWidth, simHeight));
+		GLCall(glUniform3f(glGetUniformLocation(meshShader, "color"), diskColor[0], diskColor[1], diskColor[2]));
+		GLCall(glUniform2f(glGetUniformLocation(meshShader, "translation"), scene.obstacleX, scene.obstacleY));
+		GLCall(glUniform1f(glGetUniformLocation(meshShader, "scale"), scene.obstacleRadius + fluid.particleRadius));
+
+		GLCall(unsigned int posLoc = glGetAttribLocation(meshShader, "attrPosition"));
+		GLCall(glEnableVertexAttribArray(posLoc));
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, diskVertBuffer));
+		GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, false, 0, 0));
+
+		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, diskIdBuffer));
+		GLCall(glDrawElements(GL_TRIANGLES, 3 * numSegs, GL_UNSIGNED_SHORT, 0));
+
+		GLCall(glDisableVertexAttribArray(posLoc));
+
+		std::cout << "<Application.draw()> Disk shown." << std::endl;
 	}
 
-	GLCall(glClear(GL_DEPTH_BUFFER_BIT));
-
-	float diskColor[3] = { 1.0f, 0.0f, 0.0f };
-
-	GLCall(glUseProgram(meshShader));
-	GLCall(glUniform2f(glGetUniformLocation(meshShader, "domainSize"), simWidth, simHeight));
-	GLCall(glUniform3f(glGetUniformLocation(meshShader, "color"), diskColor[0], diskColor[1], diskColor[2]));
-	GLCall(glUniform2f(glGetUniformLocation(meshShader, "translation"), scene.obstacleX, scene.obstacleY));
-	GLCall(glUniform1f(glGetUniformLocation(meshShader, "scale"), scene.obstacleRadius + fluid.particleRadius));
-
-	GLCall(unsigned int posLoc = glGetAttribLocation(meshShader, "attrPosition"));
-	GLCall(glEnableVertexAttribArray(posLoc));
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, diskVertBuffer));
-	GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, false, 0, 0));
-
-	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, diskIdBuffer));
-	GLCall(glDrawElements(GL_TRIANGLES, 3 * numSegs, GL_UNSIGNED_SHORT, 0));
-
-	GLCall(glDisableVertexAttribArray(posLoc));
+	std::cout << "<Application.draw()> Finished drawing!" << std::endl;
 }
 
 /// <summary>
