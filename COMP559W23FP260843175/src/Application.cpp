@@ -9,13 +9,13 @@
  */
 
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 #include "includes.h"
 #include "OpenGlHelpers.h"
 #include "Scene.h"
 #include "FlipFluid.cpp"
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
 
 
 
@@ -75,7 +75,7 @@ float simHeight = 3.0f;
 float cScale = height / simHeight;
 float simWidth = width / cScale;
 
-// UI Property
+// UI Variables
 bool mouseDown = false;
 
 // Sim Physical Properties SET UP
@@ -105,19 +105,18 @@ FlipFluid fluid = FlipFluid(density, tankWidth, tankHeight, h, r, maxParticles, 
 * ========================================================================================================================
 */
 int main() {
-	/* Initialize Simulator Variables */
+	// Finish Setting Up Scene and Fluid objects
 	finishSceneFluidSetup();
 
-	/* Initialize GLFW */
+	// Initialize Graphics Components
 	if (!glfwInit()) {return -1;}
-
-	/* Create a windowed mode window and its OpenGL context */
+	// GLFW
 	window = glfwCreateWindow(width, height, "COMP559 Winter 2023 Final Project 260843175", NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		return -1;
 	}
-	// Mark current flgw context and initialize glew
+	// GLEW
 	glfwMakeContextCurrent(window);
 	if (glewInit() != GLEW_OK) {
 		std::cout << "Error! Failed to initialize glew!" << std::endl;
@@ -130,18 +129,28 @@ int main() {
 	glfwSetCursorPosCallback(window, mousePositionCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
+
+	// Initialize ImGUI based on https://www.youtube.com/watch?v=VRwhNKoxUtk
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 330");
+
 	// Initialize Shaders
 	pointShader = ParseAndCreateShader("res/shaders/point.shader");
 	meshShader = ParseAndCreateShader("res/shaders/mesh.shader");
 
 	// Rendering loop
 	while (!glfwWindowShouldClose(window)) {
-		std::cout << "Working on frame number " << scene.frameNr << "." << std::endl;
 		simulate();
 		draw();
 	}
 
 	// Clean up
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 	glDeleteProgram(pointShader);
 	glDeleteProgram(meshShader);
 	glfwTerminate();
@@ -283,12 +292,13 @@ void mousePositionCallback(GLFWwindow* window, double x, double y) {
 /// Adapted for C++ GLFW via https://www.glfw.org/docs/3.3/input_guide.html
 /// Also this stackoverflow page helps with getting xpos ypos since our
 /// signature does not itself give this info: https://stackoverflow.com/questions/45130391/opengl-get-cursor-coordinate-on-mouse-click-in-c
+/// Exclusion of ImGUI clicks based on code provided to us in assignment 3.
 /// </summary>
 /// <param name="window"></param>
 /// <param name="x"></param>
 /// <param name="y"></param>
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && !ImGui::GetIO().WantCaptureMouse) {
 		// If left press
 		double x, y;
 		glfwGetCursorPos(window, &x, &y);
@@ -327,8 +337,15 @@ void draw() {
 	glClear(GL_COLOR_BUFFER_BIT); // Clear
 	// DRAW CODE STARTS HERE
 
-	drawUI();
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
 	drawFluids();
+	drawUI();
+
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	// DRAW CODE ENDS HERE
 	glfwSwapBuffers(window); // Buffer Swap
@@ -489,9 +506,6 @@ void drawFluids() {
 /// FOR ASSIGNEMNT 3 AS `fluid.cpp`.
 /// </summary>
 void drawUI() {
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
 	ImGui::Begin("Scene Settings");
 	ImGui::Text("Shortkeys:\n\tSpace\t- pause/resume");
 	ImGui::Checkbox("Paused", &scene.paused);
@@ -508,5 +522,4 @@ void drawUI() {
 	ImGui::Checkbox("Show Particles", &scene.showParticles);
 	ImGui::Checkbox("Show Grid", &scene.showGrid);
 	ImGui::End();
-	ImGui::Render();
 }
