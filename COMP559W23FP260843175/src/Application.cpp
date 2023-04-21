@@ -81,9 +81,10 @@ float simWidth = width / cScale;
 
 // UI Variables
 bool mouseDown = false;
+bool stepForward = false;
 
 // Sim Physical Properties SET UP
-int res = 10;
+int res = 5;
 float tankHeight = 1.0 * simHeight;
 float tankWidth = 1.0 * simWidth;
 float h = tankHeight / res;
@@ -267,12 +268,13 @@ void toggleStart() {
 /// Calls for the calculation of the next frame of the simulation.
 /// </summary>
 void simulate() {
-	if (!scene.paused) {
+	if (!scene.paused || stepForward) {
 		fluid.simulate(
 			scene.dt, scene.gravity, scene.flipRatio, scene.numPressureIters, scene.numParticleIters,
 			scene.overRelaxation, scene.compensateDrift, scene.separateParticles,
 			scene.obstacleX, scene.obstacleY, scene.obstacleRadius);
 		scene.frameNr++;
+		stepForward = false; // If keyboard asks for stepforward, step forward once.
 	}
 }
 
@@ -333,6 +335,9 @@ void keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int action, 
 	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
 		toggleStart();
 	}
+	else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+		stepForward = true;
+	}
 }
 
 /// <summary>
@@ -365,7 +370,7 @@ void draw() {
 /// </summary>
 void drawFluids() {
 
-	std::cout << "<Application.drawFluids()> Begun drawing." << std::endl;
+	//std::cout << "<Application.drawFluids()> Begun drawing." << std::endl;
 
 	GLCall(glViewport(0, 0, width, height));
 
@@ -395,11 +400,11 @@ void drawFluids() {
 
 		delete[] cellCenters;
 
-		std::cout << "<Application.drawFluids()> Grid Vertex Buffer initialized." << std::endl;
+		//std::cout << "<Application.drawFluids()> Grid Vertex Buffer initialized." << std::endl;
 	}
 	if (gridColorBuffer == -1) {
 		GLCall(glGenBuffers(1, &gridColorBuffer));
-		std::cout << "<Application.drawFluids()> Grid Color Buffer initialized." << std::endl;
+		//std::cout << "<Application.drawFluids()> Grid Color Buffer initialized." << std::endl;
 	}
 
 	// Particles Buffering
@@ -408,14 +413,14 @@ void drawFluids() {
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer));
 		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 2 * fluid.numParticles, fluid.particlePos.data(), GL_DYNAMIC_DRAW));
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-		std::cout << "<Application.drawFluids()> Point Vertex Buffer initialized." << std::endl;
+		//std::cout << "<Application.drawFluids()> Point Vertex Buffer initialized." << std::endl;
 	}
 	if (pointColorBuffer == -1) {
 		GLCall(glGenBuffers(1, &pointColorBuffer));
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, gridColorBuffer));
 		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * fluid.numParticles, fluid.cellColor.data(), GL_DYNAMIC_DRAW));
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-		std::cout << "<Application.drawFluids()> Point Colour Buffer initialized" << std::endl;
+		//std::cout << "<Application.drawFluids()> Point Colour Buffer initialized" << std::endl;
 	}
 
 	// Disk Buffering
@@ -447,7 +452,7 @@ void drawFluids() {
 		GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * 150, diskIds, GL_DYNAMIC_DRAW));
 		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
 
-		std::cout << "<Application.drawFluids()> Disk Vertex Buffer initialized." << std::endl;
+		//std::cout << "<Application.drawFluids()> Disk Vertex Buffer initialized." << std::endl;
 	}
 
 	/*
@@ -484,7 +489,7 @@ void drawFluids() {
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
 		GLCall(glUseProgram(0));
 
-		std::cout << "<Application.drawFluids()> Grid shown." << std::endl;
+		//std::cout << "<Application.drawFluids()> Grid shown." << std::endl;
 	}
 
 	// Water Showing
@@ -544,12 +549,7 @@ void drawFluids() {
 		//GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
 		//GLCall(glUseProgram(0));
 
-		//std::cout << "<Application.drawFluids()> Particles are: " << std::endl;
-		//for (int i = 0; i < fluid.numParticles; i++) {
-		//	std::cout << "t" << i << ": (" << fluid.particlePos[i * 2 + 0]/simWidth << "," << fluid.particlePos[i * 2 + 1]/simHeight << ")" << std::endl;
-		//}
-
-		std::cout << "<Application.drawFluids()> Particles shown." << std::endl;
+		//std::cout << "<Application.drawFluids()> Particles shown." << std::endl;
 	}
 
 	// Disk Drawing
@@ -574,7 +574,7 @@ void drawFluids() {
 		GLCall(glDisableVertexAttribArray(posLoc));
 		GLCall(glUseProgram(0));
 
-		std::cout << "<Application.drawFluids()> Disk shown." << std::endl;
+		//std::cout << "<Application.drawFluids()> Disk shown." << std::endl;
 	}
 
 
@@ -633,7 +633,7 @@ void drawFluids() {
 
 
 
-	std::cout << "<Application.drawFluids()> Finished drawing!" << std::endl;
+	//std::cout << "<Application.drawFluids()> Finished drawing!" << std::endl;
 }
 
 /// <summary>

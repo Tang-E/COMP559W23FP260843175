@@ -86,9 +86,15 @@ class FlipFluid {
 			this->density = density;
 			this->fNumX = floor(width / spacing) + 1;
 			this->fNumY = floor(height / spacing) + 1;
-			this->h = std::fmax(width / this->fNumX, height / this->fNumY);
+			this->h = max((float)width / this->fNumX, (float)height / this->fNumY);
 			this->fInvSpacing = 1.0 / this->h;
 			this->fNumCells = this->fNumX * this->fNumY;
+			std::cout << "<FlipFluid> \n"
+				<< "\tfNumX = " << this->fNumX << "\n"
+				<< "\tfNumY = " << this->fNumY << "\n"
+				<< "\th = " << this->h << "\n"
+				<< "\tfInvSpacing = " << this->fInvSpacing << "\n"
+				<< "\tfNumCells = " << this->fNumCells << std::endl;
 
 			this->u.resize(fNumCells);
 			this->v.resize(fNumCells);
@@ -116,8 +122,8 @@ class FlipFluid {
 
 			this->particleRadius = particleRadius;
 			this->pInvSpacing = 1.0 / (2.2 * particleRadius);
-			this->pNumX = floor(width * this->pInvSpacing) + 1;
-			this->pNumY = floor(height * this->pInvSpacing) + 1;
+			this->pNumX = floor((float)width * this->pInvSpacing) + 1;
+			this->pNumY = floor((float)height * this->pInvSpacing) + 1;
 			this->pNumCells = this->pNumX * this->pNumY;
 
 			this->numCellParticles.resize(this->pNumCells);
@@ -267,10 +273,25 @@ class FlipFluid {
 			float minY = h + r;
 			float maxY = (fNumY - 1) * h - r;
 
+			//std::cout << "<handleParticleCollisions>\n"
+			//	<< "\th = " << h << "\n"
+			//	<< "\tfInvSpacing = " << fInvSpacing << "\n"
+			//	<< "\tfNumX = " << fNumX << "\n"
+			//	<< "\tfNumY = " << fNumY << "\n"
+			//	<< "\tr = " << r << "\n"
+			//	<< "\tor1 = " << or1 << "\n"
+			//	<< "\tor2 = " << or2 << "\n"
+			//	<< "\tminDist = " << minDist << "\n"
+			//	<< "\tminDist2 = " << minDist2 << "\n"
+			//	<< "\tx-Bounds = [" << minX << "," << maxX << "]\n"
+			//	<< "\ty-Bounds = [" << minY << "," << maxY << "]\n" << std::endl;
+
 
 			for (int i = 0; i < numParticles; i++) {
 				float x = particlePos[2 * i];
 				float y = particlePos[2 * i + 1];
+
+				std::cout << i << std::endl;
 
 				float dx = x - obstacleX;
 				float dy = y - obstacleY;
@@ -670,26 +691,20 @@ class FlipFluid {
 		*/
 		void simulate(float dt, float gravity, float flipRatio, int numPressureIters, int numParticleIters, float overRelaxation, bool compensateDrift, bool separateParticles, float obstacleX, float abstacleY, float obstacleRadius)
 		{
-			std::cout << "<SIMULATE> Received a call for simulate." << std::endl;
 
 			int numSubSteps = 1;
 			float sdt = dt / numSubSteps;
 
 			for (int step = 0; step < numSubSteps; step++) {
 
-				std::cout << "<SIMULATE> Working on substep " << step << " of " << numSubSteps << std::endl;
-
 				integrateParticles(sdt, gravity);
-				if (separateParticles)
-					pushParticlesApart(numParticleIters);
+				//if (separateParticles) pushParticlesApart(numParticleIters);
 				handleParticleCollisions(obstacleX, abstacleY, obstacleRadius);
-				transferVelocities(true, flipRatio);
-				updateParticleDensity();
-				solveIncompressibility(numPressureIters, sdt, overRelaxation, compensateDrift);
-				transferVelocities(false, flipRatio);
+				//transferVelocities(true, flipRatio);
+				//updateParticleDensity();
+				//solveIncompressibility(numPressureIters, sdt, overRelaxation, compensateDrift);
+				//transferVelocities(false, flipRatio);
 			}
-
-			std::cout << "<SIMULATE> Finished all substeps. Updating colours." << std::endl;
 
 			updateParticleColors();
 			updateCellColors();
