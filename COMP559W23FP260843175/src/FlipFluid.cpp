@@ -685,10 +685,10 @@ class FlipFluid {
 				integrateParticles(sdt, gravity);
 				if (separateParticles) pushParticlesApart(numParticleIters);
 				handleParticleCollisions(obstacleX, abstacleY, obstacleRadius);
-				//transferVelocities(true, flipRatio);
+				transferVelocities(true, flipRatio);
 				updateParticleDensity();
-				//solveIncompressibility(numPressureIters, sdt, overRelaxation, compensateDrift);
-				//transferVelocities(false, flipRatio);
+				solveIncompressibility(numPressureIters, sdt, overRelaxation, compensateDrift);
+				transferVelocities(false, flipRatio);
 			}
 
 			updateParticleColors();

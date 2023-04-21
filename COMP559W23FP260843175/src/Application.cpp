@@ -421,7 +421,7 @@ void drawFluids() {
 	if (pointColorBuffer == -1) {
 		GLCall(glGenBuffers(1, &pointColorBuffer));
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, gridColorBuffer));
-		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * fluid.numParticles, fluid.cellColor.data(), GL_DYNAMIC_DRAW));
+		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * fluid.numParticles, fluid.particleColor.data(), GL_DYNAMIC_DRAW));
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
 		//std::cout << "<Application.drawFluids()> Point Colour Buffer initialized" << std::endl;
 	}
@@ -479,7 +479,8 @@ void drawFluids() {
 		GLCall(glEnableVertexAttribArray(posLoc));
 		GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, 0, 0));
 
-
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, gridColorBuffer));
+		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * fluid.cellColor.size(), fluid.cellColor.data(), GL_DYNAMIC_DRAW));
 		GLCall(unsigned int colorLoc = glGetAttribLocation(pointShader, "attrColor"));
 		GLCall(glEnableVertexAttribArray(colorLoc));
 		GLCall(glVertexAttribPointer(colorLoc, 3, GL_FLOAT, GL_FALSE, 0, 0));
@@ -526,32 +527,6 @@ void drawFluids() {
 		GLCall(glDisable(GL_POINT_SMOOTH));
 		GLCall(glUseProgram(0));
 
-		//GLCall(glUseProgram(pointShader));
-		//GLCall(glUniform2f(glGetUniformLocation(pointShader, "domainSize"), simWidth, simHeight));
-		//GLCall(glUniform1f(glGetUniformLocation(pointShader, "pointSize"), pointSize));
-		//GLCall(glUniform1f(glGetUniformLocation(pointShader, "drawDisk"), 1.0));
-
-
-
-		//GLCall(unsigned int posLoc = glGetAttribLocation(pointShader, "attrPosition"));
-		//GLCall(glEnableVertexAttribArray(posLoc));
-		//GLCall(glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, 0, 0));
-
-		//GLCall(glBindBuffer(GL_ARRAY_BUFFER, pointColorBuffer));
-		//GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * fluid.particleColor.size(), fluid.particleColor.data(), GL_DYNAMIC_DRAW));
-
-		//GLCall(unsigned int colorLoc = glGetAttribLocation(pointShader, "attrColor"));
-		//GLCall(glEnableVertexAttribArray(colorLoc));
-		//GLCall(glVertexAttribPointer(colorLoc, 3, GL_FLOAT, GL_FALSE, 0, 0));
-
-		//GLCall(glDrawArrays(GL_POINTS, 0, fluid.numParticles));
-
-		//GLCall(glDisableVertexAttribArray(posLoc));
-		//GLCall(glDisableVertexAttribArray(colorLoc));
-
-		//GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-		//GLCall(glUseProgram(0));
-
 		//std::cout << "<Application.drawFluids()> Particles shown." << std::endl;
 	}
 
@@ -579,62 +554,6 @@ void drawFluids() {
 
 		//std::cout << "<Application.drawFluids()> Disk shown." << std::endl;
 	}
-
-
-
-
-
-
-
-
-	//GLCall(glClear(GL_DEPTH_BUFFER_BIT));
-	//
-	//float pointSize = 2.0 * fluid.particleRadius / simWidth * width;
-
-	//float pointVertices[] = { 
-	//	0.5f, 0.5f, 
-	//	-0.25f, -0.25f, 
-	//	0.75f, 0.75f 
-	//};
-	//float colourVertices[] = {
-	//	1.00f, 0.00f, 0.00f,
-	//	0.00f, 1.00f, 0.00f,
-	//	0.00f, 0.00f, 1.00f
-	//};
-
-	//if (tempVertexBuffer == -1) {
-	//	GLCall(glGenBuffers(1, &tempVertexBuffer));
-	//	GLCall(glBindBuffer(GL_ARRAY_BUFFER, tempVertexBuffer));
-	//	GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6, pointVertices, GL_DYNAMIC_DRAW));
-	//	GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-	//}
-	//if (tempColourBuffer == -1) {
-	//	GLCall(glGenBuffers(1, &tempColourBuffer));
-	//	GLCall(glBindBuffer(GL_ARRAY_BUFFER, tempColourBuffer));
-	//	GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 9, colourVertices, GL_DYNAMIC_DRAW));
-	//	GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-	//}
-
-	//GLCall(glEnable(GL_POINT_SMOOTH));
-	//GLCall(glEnableClientState(GL_VERTEX_ARRAY));
-	//GLCall(glEnableClientState(GL_COLOR_ARRAY));
-	//GLCall(glPointSize(200));
-	//GLCall(glBindBuffer(GL_ARRAY_BUFFER, tempVertexBuffer));
-	//GLCall(glVertexPointer(2, GL_FLOAT, 0, 0));
-	//GLCall(glBindBuffer(GL_ARRAY_BUFFER, tempColourBuffer));
-	//GLCall(glColorPointer(3, GL_FLOAT, 0, 0));
-	//GLCall(glDrawArrays(GL_POINTS, 0, 3));
-	//GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-	//GLCall(glDisableClientState(GL_COLOR_ARRAY));
-	//GLCall(glDisableClientState(GL_VERTEX_ARRAY));
-	//GLCall(glDisable(GL_POINT_SMOOTH));
-	//GLCall(glUseProgram(0));
-
-
-
-
-
-
 
 	//std::cout << "<Application.drawFluids()> Finished drawing!" << std::endl;
 }
