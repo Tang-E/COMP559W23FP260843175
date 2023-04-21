@@ -461,9 +461,9 @@ class FlipFluid {
 				float dx = component == 0 ? 0.0 : h2;
 				float dy = component == 0 ? h2 : 0.0;
 
-				std::vector<float> f = component == 0 ? u : v;
-				std::vector<float> prevF = component == 0 ? prevU : prevV;
-				std::vector<float> d = component == 0 ? du : dv;
+				std::vector<float>* f = component == 0 ? &u : &v;
+				std::vector<float>* prevF = component == 0 ? &prevU : &prevV;
+				std::vector<float>* d = component == 0 ? &du : &dv;
 
 				for (int i = 0; i < numParticles; i++) {
 					float x = particlePos[2 * i];
@@ -495,10 +495,10 @@ class FlipFluid {
 
 					if (toGrid) {
 						float  pv = particleVel[2 * i + component];
-						f[nr0] += pv * d0;  d[nr0] += d0;
-						f[nr1] += pv * d1;  d[nr1] += d1;
-						f[nr2] += pv * d2;  d[nr2] += d2;
-						f[nr3] += pv * d3;  d[nr3] += d3;
+						(*f)[nr0] += pv * d0;  (*d)[nr0] += d0;
+						(*f)[nr1] += pv * d1;  (*d)[nr1] += d1;
+						(*f)[nr2] += pv * d2;  (*d)[nr2] += d2;
+						(*f)[nr3] += pv * d3;  (*d)[nr3] += d3;
 					}
 					else {
 						int offset = component == 0 ? n : 1;
@@ -512,9 +512,9 @@ class FlipFluid {
 
 						if (d > 0.0) {
 
-							float picV = (valid0 * d0 * f[nr0] + valid1 * d1 * f[nr1] + valid2 * d2 * f[nr2] + valid3 * d3 * f[nr3]) / d;
-							float corr = (valid0 * d0 * (f[nr0] - prevF[nr0]) + valid1 * d1 * (f[nr1] - prevF[nr1])
-								+ valid2 * d2 * (f[nr2] - prevF[nr2]) + valid3 * d3 * (f[nr3] - prevF[nr3])) / d;
+							float picV = (valid0 * d0 * (*f)[nr0] + valid1 * d1 * (*f)[nr1] + valid2 * d2 * (*f)[nr2] + valid3 * d3 * (*f)[nr3]) / d;
+							float corr = (valid0 * d0 * ((*f)[nr0] - (*prevF)[nr0]) + valid1 * d1 * ((*f)[nr1] - (*prevF)[nr1])
+								+ valid2 * d2 * ((*f)[nr2] - (*prevF)[nr2]) + valid3 * d3 * ((*f)[nr3] - (*prevF)[nr3])) / d;
 							float flipV = v + corr;
 
 							particleVel[2 * i + component] = (1.0 - flipRatio) * picV + flipRatio * flipV;
@@ -524,8 +524,8 @@ class FlipFluid {
 
 				if (toGrid) {
 					for (int i = 0; i < /*f.length*/ fNumCells; i++) {
-						if (d[i] > 0.0)
-							f[i] /= d[i];
+						if ((*d)[i] > 0.0)
+							(*f)[i] /= (*d)[i];
 					}
 
 					// restore solid cells
