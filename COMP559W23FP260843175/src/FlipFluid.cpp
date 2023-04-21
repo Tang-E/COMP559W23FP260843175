@@ -522,16 +522,16 @@ class FlipFluid {
 		void solveIncompressibility(int numIters, float dt, float overRelaxation, bool compensateDrift = true) {
 
 			std::fill(p.begin(), p.end(), 0.0f);
-			u = prevU;
-			v = prevV;
+			prevU = u;
+			prevV = v;
 
 			int n = fNumY;
 			float cp = density * h / dt;
 
-			for (int i = 0; i < fNumCells; i++) { //wtf does this do for us??????
-				float u = this->u[i];
-				float v = this->v[i];
-			}
+			//for (int i = 0; i < fNumCells; i++) { //wtf does this do for us??????
+			//	float u = this->u[i];
+			//	float v = this->v[i];
+			//}
 
 			for (int iter = 0; iter < numIters; iter++) {
 
