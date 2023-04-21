@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <vector>
 #include <cmath>
+#include <chrono>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>

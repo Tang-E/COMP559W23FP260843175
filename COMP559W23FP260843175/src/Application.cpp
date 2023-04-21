@@ -83,6 +83,11 @@ float simWidth = width / cScale;
 bool mouseDown = false;
 bool stepForward = false;
 
+// Statistics Variables
+std::chrono::high_resolution_clock::time_point prevTick;
+std::chrono::high_resolution_clock::time_point currTick;
+bool prevTickWasPaused = true;
+
 // Sim Physical Properties SET UP
 int res = 64;
 float tankHeight = 1.0 * simHeight;
@@ -112,6 +117,11 @@ FlipFluid fluid = FlipFluid(density, tankWidth, tankHeight, h, r, maxParticles, 
 int main() {
 	// Finish Setting Up Scene and Fluid objects
 	finishSceneFluidSetup();
+
+	// Reset Statistics Stuff
+	prevTick = std::chrono::high_resolution_clock::now();
+	currTick = std::chrono::high_resolution_clock::now();
+	prevTickWasPaused = true;
 
 	// Initialize Graphics Components
 	if (!glfwInit()) {return -1;}
@@ -340,6 +350,7 @@ void keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int action, 
 	}
 	else if (key == GLFW_KEY_R && action == GLFW_PRESS) {
 		finishSceneFluidSetup(); // Restart
+		scene.frameNr = 0;
 	}
 }
 
@@ -564,11 +575,23 @@ void drawFluids() {
 /// FOR ASSIGNEMNT 3 AS `fluid.cpp`.
 /// </summary>
 void drawUI() {
+
+	prevTick = currTick;
+	prevTickWasPaused = scene.paused;
+	currTick = std::chrono::high_resolution_clock::now();
+	double velocity = scene.dt / std::chrono::duration_cast<std::chrono::duration<double>>(currTick - prevTick).count();
+
 	ImGui::Begin("Scene Settings");
 	ImGui::Text("Shortkeys:\n\tSpace\t- pause/resume");
 	ImGui::Checkbox("Paused", &scene.paused);
 	ImGui::Text("Frame Number: %7i", scene.frameNr);
-	ImGui::SliderFloat("g", &scene.gravity, -25.0f, 25.0f);
+	if (!prevTickWasPaused) {
+		ImGui::Text("Simulation Rate: %.2f times real speed", velocity);
+	}
+	else {
+		ImGui::Text("Simulation Rate: PAUSED");
+	}
+	ImGui::SliderFloat("g", &scene.gravity, -9.81f, 9.81f);
 	ImGui::SliderFloat("dt", &scene.dt, 0.001f, 0.1f);
 	ImGui::SliderFloat("flipRatio", &scene.flipRatio, 0.0f, 1.0f);
 	ImGui::SliderInt("numPressureIters", &scene.numPressureIters, 1, 200);
