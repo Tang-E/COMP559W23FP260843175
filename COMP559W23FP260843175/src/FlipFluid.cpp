@@ -273,25 +273,10 @@ class FlipFluid {
 			float minY = h + r;
 			float maxY = (fNumY - 1) * h - r;
 
-			//std::cout << "<handleParticleCollisions>\n"
-			//	<< "\th = " << h << "\n"
-			//	<< "\tfInvSpacing = " << fInvSpacing << "\n"
-			//	<< "\tfNumX = " << fNumX << "\n"
-			//	<< "\tfNumY = " << fNumY << "\n"
-			//	<< "\tr = " << r << "\n"
-			//	<< "\tor1 = " << or1 << "\n"
-			//	<< "\tor2 = " << or2 << "\n"
-			//	<< "\tminDist = " << minDist << "\n"
-			//	<< "\tminDist2 = " << minDist2 << "\n"
-			//	<< "\tx-Bounds = [" << minX << "," << maxX << "]\n"
-			//	<< "\ty-Bounds = [" << minY << "," << maxY << "]\n" << std::endl;
-
 
 			for (int i = 0; i < numParticles; i++) {
 				float x = particlePos[2 * i];
 				float y = particlePos[2 * i + 1];
-
-				std::cout << i << std::endl;
 
 				float dx = x - obstacleX;
 				float dy = y - obstacleY;
@@ -698,10 +683,10 @@ class FlipFluid {
 			for (int step = 0; step < numSubSteps; step++) {
 
 				integrateParticles(sdt, gravity);
-				//if (separateParticles) pushParticlesApart(numParticleIters);
+				if (separateParticles) pushParticlesApart(numParticleIters);
 				handleParticleCollisions(obstacleX, abstacleY, obstacleRadius);
 				//transferVelocities(true, flipRatio);
-				//updateParticleDensity();
+				updateParticleDensity();
 				//solveIncompressibility(numPressureIters, sdt, overRelaxation, compensateDrift);
 				//transferVelocities(false, flipRatio);
 			}

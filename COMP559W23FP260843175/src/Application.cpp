@@ -84,7 +84,7 @@ bool mouseDown = false;
 bool stepForward = false;
 
 // Sim Physical Properties SET UP
-int res = 5;
+int res = 50;
 float tankHeight = 1.0 * simHeight;
 float tankWidth = 1.0 * simWidth;
 float h = tankHeight / res;
@@ -333,10 +333,13 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 /// <param name="mods"></param>
 void keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-		toggleStart();
+		toggleStart(); // Pause/Play
 	}
 	else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-		stepForward = true;
+		stepForward = true; // Step
+	}
+	else if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+		finishSceneFluidSetup(); // Restart
 	}
 }
 
@@ -645,7 +648,7 @@ void drawUI() {
 	ImGui::Begin("Scene Settings");
 	ImGui::Text("Shortkeys:\n\tSpace\t- pause/resume");
 	ImGui::Checkbox("Paused", &scene.paused);
-	ImGui::Text("Frame Number: &7i", &scene.frameNr);
+	ImGui::Text("Frame Number: %7i", scene.frameNr);
 	ImGui::SliderFloat("g", &scene.gravity, -25.0f, 25.0f);
 	ImGui::SliderFloat("dt", &scene.dt, 0.0f, 1.0f);
 	ImGui::SliderFloat("flipRatio", &scene.flipRatio, 0.0f, 1.0f);
