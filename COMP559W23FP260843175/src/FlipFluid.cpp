@@ -16,7 +16,9 @@
 #include "HelperFuncs.h"
 
 
-
+/// <summary>
+/// FLIP Fluid Simulator object.
+/// </summary>
 class FlipFluid {
 
 	public:
@@ -75,6 +77,17 @@ class FlipFluid {
 
 		int numParticles;
 
+		/// <summary>
+		/// Constructor. Doesn't do everything though and will still require an external
+		/// setupmethod which is located in Application.cpp.
+		/// </summary>
+		/// <param name="density"></param>
+		/// <param name="width"></param>
+		/// <param name="height"></param>
+		/// <param name="spacing"></param>
+		/// <param name="particleRadius"></param>
+		/// <param name="maxParticles"></param>
+		/// <param name="scene"></param>
 		FlipFluid(float density, int width, int height, float spacing, float particleRadius, int maxParticles, Scene* scene) {
 
 			// Pointer fields
@@ -134,9 +147,13 @@ class FlipFluid {
 
 		}
 
-		/*
-		* Simplecton integrate particles with only gravity as force.
-		*/
+		/// <summary>
+		/// Simplecton integrates particles on step.
+		/// Accelerates y velocity by gravity; then
+		/// moves position by x and y velocity.
+		/// </summary>
+		/// <param name="dt"></param>
+		/// <param name="gravity"></param>
 		void integrateParticles(float dt, float gravity)
 		{
 			for (int i = 0; i < numParticles; i++) {
@@ -148,13 +165,13 @@ class FlipFluid {
 
 
 
-		/*
-		* Applies repulsion between particles efficiently via Gauss-Seidel
-		* Complicated algorithm that involves filtering out collision checks
-		* of particles that would be too far from each other. Said filtering is
-		* something Matthias Müller has figured out and I'm not going to bother
-		* trying to reconstruct it.
-		*/
+		/// <summary>
+		/// Applies repulsion between particles efficiently via Gauss-Seidel algorithm 
+		/// that involves filtering out collision checks of particles that would be too 
+		/// far from each other. Said filtering is something Matthias Müller has figured 
+		/// out and I'm not going to bother trying to understand it.
+		/// </summary>
+		/// <param name="numIters"></param>
 		void pushParticlesApart(int numIters)
 		{
 			float colorDiffusionCoeff = 0.001;
@@ -256,9 +273,12 @@ class FlipFluid {
 			}
 		}
 
-		/*
-		* Handles particle collisions with the obstacle
-		*/
+		/// <summary>
+		/// Handles particle collision with the obstacle and walls.
+		/// </summary>
+		/// <param name="obstacleX"></param>
+		/// <param name="obstacleY"></param>
+		/// <param name="obstacleRadius"></param>
 		void handleParticleCollisions(float obstacleX, float obstacleY, float obstacleRadius)
 		{
 			float h = 1.0 / fInvSpacing;
@@ -319,11 +339,14 @@ class FlipFluid {
 			}
 		}
 
-		/*
-		* TODO: Investigate commented out section of this code.
-		* Recalculates particle rest density and then commentedly
-		* would recalculate particle densities?
-		*/
+		/// <summary>
+		/// Updates the particle-density reading at each cell.
+		/// Used as a countermeasure for drift - that is, the 
+		/// loss of water volume as a consequence of particles
+		/// that collide and are not accounted for. This accounts
+		/// for them by representing high densities of particles
+		/// which are then used in divergence calculations.
+		/// </summary>
 		void updateParticleDensity()
 		{
 			int n = fNumY;
@@ -391,9 +414,17 @@ class FlipFluid {
 			// 			}
 		}
 
-		/*
-		* Velocity Transfer Stuff between Particles and Grid
-		*/
+		/// <summary>
+		/// Function for transfering velocity data between the grid and the particles.
+		/// If toGrid is true, then velocity data is transferred from the particles
+		/// and into the grid. If toGrid is false, then velocity data is transferred
+		/// from the grid and into the particles. flipRatio is useful for when toGrid
+		/// is false as when velocity is being transferred from the grid and into the
+		/// particles, we want to know whether to overried each particle's velocity
+		/// by their grid values or whether to simply add to each particle's velocities.
+		/// </summary>
+		/// <param name="toGrid"> If True: To Grid; If False: To Particles</param>
+		/// <param name="flipRatio"> 0%: Viscous; 100% Wild </param>
 		void transferVelocities(bool toGrid, float flipRatio)
 		{
 			int n = fNumY;
@@ -512,11 +543,17 @@ class FlipFluid {
 			}
 		}
 
-		/*
-		* Solves incompressibility through gauss-seidel by going over each
-		* grid element and reducing divergence to 0 at every pass with the
-		* ability to undershoot or overshoot with overRelaxation term.
-		*/
+		/// <summary>
+		/// Divergence Solver.
+		/// Solves incompressibility through gauss-seidel by going over each 
+		/// grid element and reducing divergence to 0 at every pass with the 
+		/// ability to undershoot or overshoot with overRelaxation term.
+		/// Can compensate for volume-drift (ie, high density particle areas).
+		/// </summary>
+		/// <param name="numIters"></param>
+		/// <param name="dt"></param>
+		/// <param name="overRelaxation"></param>
+		/// <param name="compensateDrift"></param>
 		void solveIncompressibility(int numIters, float dt, float overRelaxation, bool compensateDrift = true) {
 
 			std::fill(p.begin(), p.end(), 0.0f);
@@ -577,9 +614,9 @@ class FlipFluid {
 			}
 		}
 
-		/*
-		* Updates colours of particles based on density of local particle density
-		*/
+		/// <summary>
+		/// Updates colours of particles based on density of local particle density
+		/// </summary>
 		void updateParticleColors()
 		{
 			// for (var i = 0; i < numParticles; i++) {
@@ -621,9 +658,13 @@ class FlipFluid {
 			}
 		}
 
-		/*
-		* Helper Function: Updates the colour of the specific cell based on val
-		*/
+		/// <summary>
+		/// Helper Function: Updates the colour of the specific cell based on val
+		/// </summary>
+		/// <param name="cellNr"></param>
+		/// <param name="val"></param>
+		/// <param name="minVal"></param>
+		/// <param name="maxVal"></param>
 		void setSciColor(int cellNr, float val, float minVal, float maxVal)
 		{
 			val = min(max(val, minVal), maxVal - 0.0001);
@@ -646,9 +687,9 @@ class FlipFluid {
 			cellColor[3 * cellNr + 2] = b;
 		}
 
-		/*
-		* Updates the colour of the cells
-		*/
+		/// <summary>
+		/// Updates the colour of the cells
+		/// </summary>
 		void updateCellColors()
 		{
 			std::fill(cellColor.begin(), cellColor.end(), 0.0f);
@@ -669,9 +710,20 @@ class FlipFluid {
 			}
 		}
 
-		/*
-		* Moves the FLIP water simulation one dt-seconds forward.
-		*/
+		/// <summary>
+		/// Moves the FLIP water simulation one dt-seconds forward.
+		/// </summary>
+		/// <param name="dt"></param>
+		/// <param name="gravity"></param>
+		/// <param name="flipRatio"></param>
+		/// <param name="numPressureIters"></param>
+		/// <param name="numParticleIters"></param>
+		/// <param name="overRelaxation"></param>
+		/// <param name="compensateDrift"></param>
+		/// <param name="separateParticles"></param>
+		/// <param name="obstacleX"></param>
+		/// <param name="abstacleY"></param>
+		/// <param name="obstacleRadius"></param>
 		void simulate(float dt, float gravity, float flipRatio, int numPressureIters, int numParticleIters, float overRelaxation, bool compensateDrift, bool separateParticles, float obstacleX, float abstacleY, float obstacleRadius)
 		{
 
@@ -683,7 +735,7 @@ class FlipFluid {
 				integrateParticles(sdt, gravity);
 				if (separateParticles) pushParticlesApart(numParticleIters);
 				handleParticleCollisions(obstacleX, abstacleY, obstacleRadius);
-				transferVelocities(true, flipRatio);
+				transferVelocities(true, 999.9f);
 				updateParticleDensity();
 				solveIncompressibility(numPressureIters, sdt, overRelaxation, compensateDrift);
 				transferVelocities(false, flipRatio);
