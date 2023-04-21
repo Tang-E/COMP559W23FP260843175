@@ -51,7 +51,6 @@ void drawUI();
 // Shaders must be initialized after GLEW is initialized
 unsigned int pointShader = -1;
 unsigned int meshShader = -1;
-unsigned int dotShader = -1; // My attempt at recreating Matthia's Muller's point shader which doesn't do shit here.
 unsigned int pointVertexBuffer = -1;
 unsigned int pointColorBuffer = -1;
 unsigned int gridVertexBuffer = -1;
@@ -89,7 +88,7 @@ std::chrono::high_resolution_clock::time_point currTick;
 bool prevTickWasPaused = true;
 
 // Sim Physical Properties SET UP
-int res = 64;
+int res = 100;
 float tankHeight = 1.0 * simHeight;
 float tankWidth = 1.0 * simWidth;
 float h = tankHeight / res;
@@ -282,7 +281,8 @@ void simulate() {
 		fluid.simulate(
 			scene.dt, scene.gravity, scene.flipRatio, scene.numPressureIters, scene.numParticleIters,
 			scene.overRelaxation, scene.compensateDrift, scene.separateParticles,
-			scene.obstacleX, scene.obstacleY, scene.obstacleRadius);
+			scene.obstacleX, scene.obstacleY, scene.obstacleRadius,
+			scene.cohesionMaxAccel, scene.cohesionFallOffRate, scene.cohesionMaxDistance);
 		scene.frameNr++;
 		stepForward = false; // If keyboard asks for stepforward, step forward once.
 	}
@@ -384,8 +384,6 @@ void draw() {
 /// </summary>
 void drawFluids() {
 
-	//std::cout << "<Application.drawFluids()> Begun drawing." << std::endl;
-
 	GLCall(glViewport(0, 0, width, height));
 
 	/*
@@ -413,12 +411,9 @@ void drawFluids() {
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0)); 
 
 		delete[] cellCenters;
-
-		//std::cout << "<Application.drawFluids()> Grid Vertex Buffer initialized." << std::endl;
 	}
 	if (gridColorBuffer == -1) {
 		GLCall(glGenBuffers(1, &gridColorBuffer));
-		//std::cout << "<Application.drawFluids()> Grid Color Buffer initialized." << std::endl;
 	}
 
 	// Particles Buffering
@@ -427,14 +422,12 @@ void drawFluids() {
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer));
 		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 2 * fluid.numParticles, fluid.particlePos.data(), GL_DYNAMIC_DRAW));
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-		//std::cout << "<Application.drawFluids()> Point Vertex Buffer initialized." << std::endl;
 	}
 	if (pointColorBuffer == -1) {
 		GLCall(glGenBuffers(1, &pointColorBuffer));
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, gridColorBuffer));
 		GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * fluid.numParticles, fluid.particleColor.data(), GL_DYNAMIC_DRAW));
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-		//std::cout << "<Application.drawFluids()> Point Colour Buffer initialized" << std::endl;
 	}
 
 	// Disk Buffering
@@ -465,8 +458,6 @@ void drawFluids() {
 		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, diskIdBuffer));
 		GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * 150, diskIds, GL_DYNAMIC_DRAW));
 		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-
-		//std::cout << "<Application.drawFluids()> Disk Vertex Buffer initialized." << std::endl;
 	}
 
 	/*
@@ -503,8 +494,6 @@ void drawFluids() {
 
 		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
 		GLCall(glUseProgram(0));
-
-		//std::cout << "<Application.drawFluids()> Grid shown." << std::endl;
 	}
 
 	// Water Showing
@@ -537,8 +526,6 @@ void drawFluids() {
 		GLCall(glDisableClientState(GL_VERTEX_ARRAY));
 		GLCall(glDisable(GL_POINT_SMOOTH));
 		GLCall(glUseProgram(0));
-
-		//std::cout << "<Application.drawFluids()> Particles shown." << std::endl;
 	}
 
 	// Disk Drawing
@@ -562,11 +549,8 @@ void drawFluids() {
 
 		GLCall(glDisableVertexAttribArray(posLoc));
 		GLCall(glUseProgram(0));
-
-		//std::cout << "<Application.drawFluids()> Disk shown." << std::endl;
 	}
 
-	//std::cout << "<Application.drawFluids()> Finished drawing!" << std::endl;
 }
 
 /// <summary>
@@ -593,10 +577,13 @@ void drawUI() {
 	}
 	ImGui::SliderFloat("g", &scene.gravity, -9.81f, 9.81f);
 	ImGui::SliderFloat("dt", &scene.dt, 0.001f, 0.1f);
-	ImGui::SliderFloat("flipRatio", &scene.flipRatio, 0.0f, 1.0f);
-	ImGui::SliderInt("numPressureIters", &scene.numPressureIters, 1, 200);
-	ImGui::SliderInt("numParticleIters", &scene.numParticleIters, 1, 10);
-	ImGui::SliderFloat("overRelaxation", &scene.overRelaxation, 1.0f, 2.0f);
+	ImGui::SliderFloat("PIC-FLIP Ratio", &scene.flipRatio, 0.0f, 1.0f);
+	ImGui::SliderInt("Divergence Solver GS-Iters", &scene.numPressureIters, 1, 200);
+	ImGui::SliderInt("Particle Separation GS-Iters", &scene.numParticleIters, 1, 10);
+	ImGui::SliderFloat("G-S Over Relaxation", &scene.overRelaxation, 1.0f, 2.0f);
+	ImGui::SliderFloat("Cohesion Max Accel", &scene.cohesionMaxAccel, 0.0f, 0.10f);
+	ImGui::SliderFloat("Cohesion Falloff Rate", &scene.cohesionFallOffRate, 0.0f, 10.0f);
+	ImGui::SliderFloat("Cohesion Max Distance", &scene.cohesionMaxDistance, 0.0f, 1.0f);
 	ImGui::Checkbox("Drift Compensation", &scene.compensateDrift);
 	ImGui::Checkbox("Separate Particles", &scene.separateParticles);
 	ImGui::Checkbox("Show Obstacle", &scene.showObstacle);

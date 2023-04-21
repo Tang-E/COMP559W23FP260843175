@@ -69,7 +69,8 @@ class FlipFluid {
 		void updateParticleColors();
 		void setSciColor(int cellNr, float val, float minVal, float maxVal);
 		void updateCellColors();
-		void simulate(float dt, float gravity, float flipRatio, int numPressureIters, int numParticleIters, float overRelaxation, bool compensateDrift, bool separateParticles, float obstacleX, float abstacleY, float obstacleRadius);
+		void simulate(float dt, float gravity, float flipRatio, int numPressureIters, int numParticleIters, float overRelaxation, bool compensateDrift, bool separateParticles, float obstacleX, float abstacleY, float obstacleRadius,
+			float cMaxAccel, float cFallOffRate, float cMaxDistance);
 
 };
 

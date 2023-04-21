@@ -21,6 +21,9 @@
 /// </summary>
 class FlipFluid {
 
+	private:
+		glm::vec2 simDimensions;
+
 	public:
 
 		// Constants/Definitions
@@ -77,18 +80,24 @@ class FlipFluid {
 
 		int numParticles;
 
+		// Cohesion Algorithm Properties
+		int numSubdivisions = 16;
+
 		/// <summary>
 		/// Constructor. Doesn't do everything though and will still require an external
 		/// setupmethod which is located in Application.cpp.
 		/// </summary>
-		/// <param name="density"></param>
-		/// <param name="width"></param>
-		/// <param name="height"></param>
-		/// <param name="spacing"></param>
-		/// <param name="particleRadius"></param>
+		/// <param name="density"> Fluid Density </param>
+		/// <param name="width"> Tank Width in Metres </param>
+		/// <param name="height" Tank Width in Metres ></param>
+		/// <param name="spacing"> Cell Width in Metres </param>
+		/// <param name="particleRadius"> Particle Radius in Metres </param>
 		/// <param name="maxParticles"></param>
 		/// <param name="scene"></param>
-		FlipFluid(float density, int width, int height, float spacing, float particleRadius, int maxParticles, Scene* scene) {
+		FlipFluid(float density, float width, float height, float spacing, float particleRadius, int maxParticles, Scene* scene) {
+
+			// Domain Properties
+			simDimensions = glm::vec2(width, height);
 
 			// Pointer fields
 
@@ -99,7 +108,7 @@ class FlipFluid {
 			this->density = density;
 			this->fNumX = floor(width / spacing) + 1;
 			this->fNumY = floor(height / spacing) + 1;
-			this->h = max((float)width / this->fNumX, (float)height / this->fNumY);
+			this->h = max(width / this->fNumX, height / this->fNumY);
 			this->fInvSpacing = 1.0 / this->h;
 			this->fNumCells = this->fNumX * this->fNumY;
 			std::cout << "<FlipFluid> \n"
@@ -160,6 +169,66 @@ class FlipFluid {
 				particleVel[2 * i + 1] += dt * gravity;
 				particlePos[2 * i] += particleVel[2 * i] * dt;
 				particlePos[2 * i + 1] += particleVel[2 * i + 1] * dt;
+			}
+		}
+
+		/// <summary>
+		/// Simplecton integrate particles with a inter-particle cohesive force.
+		/// We want a force that keeps nearby particles together and ignores 
+		/// faraway particles. We thus cycle through each particle pair and
+		/// give them a pull force toward each other based on negative exponential
+		/// of their distance such that a maximum force can be set and a natural
+		/// falloff occurs based on larger distance. Both those two terms are
+		/// adjustable and we introduce a maxDistance that allows us to flat
+		/// out ignore pairs of particles too far from each other.
+		/// 
+		/// This method is not in Matthias Muller's provided code.
+		/// Custom implementation by Edwin Pan 260843175
+		/// 
+		/// </summary>
+		/// <param name="dt"></param>
+		/// <param name="maxAccel">Accecleration in m/s^2 if particles atop each other.</param>
+		/// <param name="fallOffRate">Bigger Falloff Rate means greater sensitivity to far-ness</param>
+		/// <param name="maxDistance">Max distance after which pair of particles' cohesion will be ignored</param>
+		void integrateCohesion(float dt, float cMaxAccel, float cFallOffRate, float cMaxDistance) {
+
+			// Subdivide the simulation space so that not all
+
+
+
+			// Un-update Particle Position
+			for (int i = 0; i < particlePos.size(); i++) {
+				particlePos[i] -= particleVel[i];
+			}
+
+			// Update Velocity via Acceleration due to Cohesion
+			for (int i = 0; i < numParticles; i++) {
+				// Particle 0 (i) about which we are calculating net cohesive acceleration
+				glm::vec2 p0(particlePos[2 * i + 0], particlePos[2 * i + 1]);
+				glm::vec2 a0(0, 0);
+				// For each particle not particle i that could be adding cohesive forces
+				for (int j = 0; j < numParticles; j++) {
+					if (i == j) continue;
+					// Particle 1 (j) which produces cohesive force
+					glm::vec2 p1(particlePos[2 * j + 0], particlePos[2 * j + 0]);
+					// delta p, vector from p0 to p1 the direction of cohesive force to p0
+					glm::vec2 dp = p1 - p0;
+					float dist = glm::length(dp);
+					std::cout << dist << std::endl;
+					if (dist > cMaxDistance) continue; // Prune particles that are too far
+					// Calculate acceleration vector toward p1.
+					float accel = cMaxAccel * std::exp(-dist*cFallOffRate);
+					std::cout << accel << std::endl;
+					glm::vec2 a10 = dp * accel;
+					a0 += a10;
+				}
+
+				particleVel[2 * i + 0] += a0.x;
+				particleVel[2 * i + 1] += a0.y;
+			}
+			// Update Position via updated velocity (Simplecton)
+			for (int i = 0; i < particlePos.size(); i++) {
+				particlePos[i] += particleVel[i];
 			}
 		}
 
@@ -710,21 +779,9 @@ class FlipFluid {
 			}
 		}
 
-		/// <summary>
-		/// Moves the FLIP water simulation one dt-seconds forward.
-		/// </summary>
-		/// <param name="dt"></param>
-		/// <param name="gravity"></param>
-		/// <param name="flipRatio"></param>
-		/// <param name="numPressureIters"></param>
-		/// <param name="numParticleIters"></param>
-		/// <param name="overRelaxation"></param>
-		/// <param name="compensateDrift"></param>
-		/// <param name="separateParticles"></param>
-		/// <param name="obstacleX"></param>
-		/// <param name="abstacleY"></param>
-		/// <param name="obstacleRadius"></param>
-		void simulate(float dt, float gravity, float flipRatio, int numPressureIters, int numParticleIters, float overRelaxation, bool compensateDrift, bool separateParticles, float obstacleX, float abstacleY, float obstacleRadius)
+		// Simulates the next simulation timestep
+		void simulate(float dt, float gravity, float flipRatio, int numPressureIters, int numParticleIters, float overRelaxation, bool compensateDrift, bool separateParticles, float obstacleX, float abstacleY, float obstacleRadius, 
+			float cMaxAccel, float cFallOffRate, float cMaxDistance)
 		{
 
 			int numSubSteps = 1;
@@ -733,6 +790,7 @@ class FlipFluid {
 			for (int step = 0; step < numSubSteps; step++) {
 
 				integrateParticles(sdt, gravity);
+				//integrateCohesion(sdt, cMaxAccel, cFallOffRate, cMaxDistance);
 				if (separateParticles) pushParticlesApart(numParticleIters);
 				handleParticleCollisions(obstacleX, abstacleY, obstacleRadius);
 				transferVelocities(true, 999.9f);
