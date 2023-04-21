@@ -331,9 +331,7 @@ class FlipFluid {
 			float h1 = fInvSpacing;
 			float h2 = 0.5 * h;
 
-			//float d = particleDensity;
-			//d.fill(0.0);
-			std::vector<float> d(fNumCells, 0);
+			std::fill(particleDensity.begin(), particleDensity.end(), 0.0f);
 
 			for (int i = 0; i < numParticles; i++) {
 				float x = particlePos[2 * i];
@@ -353,10 +351,10 @@ class FlipFluid {
 				float sx = 1.0 - tx;
 				float sy = 1.0 - ty;
 
-				if (x0 < fNumX && y0 < fNumY) d[x0 * n + y0] += sx * sy;
-				if (x1 < fNumX && y0 < fNumY) d[x1 * n + y0] += tx * sy;
-				if (x1 < fNumX && y1 < fNumY) d[x1 * n + y1] += tx * ty;
-				if (x0 < fNumX && y1 < fNumY) d[x0 * n + y1] += sx * ty;
+				if (x0 < fNumX && y0 < fNumY) particleDensity[x0 * n + y0] += sx * sy;
+				if (x1 < fNumX && y0 < fNumY) particleDensity[x1 * n + y0] += tx * sy;
+				if (x1 < fNumX && y1 < fNumY) particleDensity[x1 * n + y1] += tx * ty;
+				if (x0 < fNumX && y1 < fNumY) particleDensity[x0 * n + y1] += sx * ty;
 			}
 
 			if (particleRestDensity == 0.0) {
@@ -365,7 +363,7 @@ class FlipFluid {
 
 				for (int i = 0; i < fNumCells; i++) {
 					if (cellType[i] == FLUID_CELL) {
-						sum += d[i];
+						sum += particleDensity[i];
 						numFluidCells++;
 					}
 				}
@@ -405,8 +403,8 @@ class FlipFluid {
 
 			if (toGrid) {
 
-				u = prevU;
-				v = prevV;
+				prevU = u;
+				prevV = v;
 
 				std::fill(du.begin(), du.end(), 0.0f);
 				std::fill(dv.begin(), dv.end(), 0.0f);
@@ -553,7 +551,7 @@ class FlipFluid {
 						float sy0 = this->s[bottom];
 						float sy1 = this->s[top];
 						s = sx0 + sx1 + sy0 + sy1;
-						if (s == 0.0)
+						if (s == 0.0) // If none are blocks that could hold fluid
 							continue;
 
 						float div = u[right] - u[center] +

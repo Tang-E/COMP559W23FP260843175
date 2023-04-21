@@ -203,7 +203,7 @@ void finishSceneFluidSetup() {
 		for (int j = 0; j < fluid.fNumY; j++) {
 			float s = 1.0;	// fluid
 			if (i == 0 || i == fluid.fNumX - 1 || j == 0)
-				s = 0.0;	// solid
+				s = 0.0;	// solid: side of the tank
 			fluid.s[i * n + j] = s;
 		}
 	}
