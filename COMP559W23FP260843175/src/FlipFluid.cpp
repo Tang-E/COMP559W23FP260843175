@@ -80,8 +80,8 @@ class FlipFluid {
 
 		int numParticles;
 
-		// Cohesion Algorithm Properties
-		int numSubdivisions = 16;
+		// Timing Statistics
+		double previousFrameTime = -1;
 
 		/// <summary>
 		/// Constructor. Doesn't do everything though and will still require an external
@@ -172,6 +172,40 @@ class FlipFluid {
 			}
 		}
 
+		glm::vec2 calculateCohesiveAccelByPositionAndStrength(glm::vec2 p, glm::vec2 target, float strength, float maxAccel, float maxDistance, float fallOffCoeff) {
+			glm::vec2 dp = target - p;
+			float dist = glm::length(dp);
+			float accel = maxAccel * std::exp(-fallOffCoeff * dist) * strength;
+			return dp / dist * accel;
+		}
+
+		/// <summary>
+		/// Calculates a acceleration by "cohesion" forces to a particle at
+		/// position p toward every particle listed in particleIndices based
+		/// on pull properties maxAccel, maxDistance, and fallOffCoeff.
+		/// </summary>
+		/// <param name="p"></param>
+		/// <param name="particleIndices"></param>
+		/// <param name="maxAccel"></param>
+		/// <param name="maxDistance"></param>
+		/// <param name="fallOffCoeff"></param>
+		/// <returns></returns>
+		glm::vec2 calculateCohesiveAccelForParticleIndices(glm::vec2 p, std::list<int> particleIndices, float maxAccel, float maxDistance, float fallOffCoeff) {
+			// Start summing the acceleration a_i for particle at position p_i
+			glm::vec2 a(0.0f, 0.0f);
+			// For all nearby particles j
+			for (int j : particleIndices) {
+				glm::vec2 p_j(particlePos[2 * j + 0], particlePos[2 * j + 1]);
+				glm::vec2 dp = p_j - p;
+				float dist = glm::length(dp);
+				if (dist > maxDistance) continue;
+				float accel = maxAccel * std::exp(-fallOffCoeff * dist);
+				a += dp / dist * accel;
+			}
+			// Return
+			return a;
+		}
+
 		/// <summary>
 		/// Simplecton integrate particles with a inter-particle cohesive force.
 		/// We want a force that keeps nearby particles together and ignores 
@@ -190,46 +224,115 @@ class FlipFluid {
 		/// <param name="maxAccel">Accecleration in m/s^2 if particles atop each other.</param>
 		/// <param name="fallOffRate">Bigger Falloff Rate means greater sensitivity to far-ness</param>
 		/// <param name="maxDistance">Max distance after which pair of particles' cohesion will be ignored</param>
-		void integrateCohesion(float dt, float cMaxAccel, float cFallOffRate, float cMaxDistance) {
+		void addCohesionAccel(float dt, float cMaxAccel, float cMaxDistance, bool fastSimulate) {
+			// Protect from invalid input
+			if (cMaxAccel <= 0 || cMaxDistance <= 0) return;
+			// Calculate the cohesive acceleration curve properties
+			// accel(distance) = euler^( fallOffCoeff*distance )
+			float epsilon = 1e-6; // Acceleration at cMaxDistance such that it is insignificant
+			float fallOffCoeff = -std::log(epsilon) / cMaxDistance;
 
-			// Subdivide the simulation space so that not all
-
-
-
-			// Un-update Particle Position
-			for (int i = 0; i < particlePos.size(); i++) {
-				particlePos[i] -= particleVel[i];
+			// Subdivide the space. Divide space into squares put into sets of VERTICAL stripes.
+			int numStripes = simDimensions.x / cMaxDistance + 1;
+			int cellsPerStripe = simDimensions.y / cMaxDistance + 1;
+			std::vector<std::vector<std::list<int>>> stripes; // The Grid
+			stripes.resize(numStripes);
+			for (int i = 0; i < numStripes; i++) {
+				stripes[i].resize(cellsPerStripe);
+				for (int j = 0; j < cellsPerStripe; j++) {
+					stripes[i][j] = std::list<int>();
+				}
 			}
 
-			// Update Velocity via Acceleration due to Cohesion
+			// Put each particle into its respective grid block.
 			for (int i = 0; i < numParticles; i++) {
-				// Particle 0 (i) about which we are calculating net cohesive acceleration
-				glm::vec2 p0(particlePos[2 * i + 0], particlePos[2 * i + 1]);
-				glm::vec2 a0(0, 0);
-				// For each particle not particle i that could be adding cohesive forces
-				for (int j = 0; j < numParticles; j++) {
-					if (i == j) continue;
-					// Particle 1 (j) which produces cohesive force
-					glm::vec2 p1(particlePos[2 * j + 0], particlePos[2 * j + 0]);
-					// delta p, vector from p0 to p1 the direction of cohesive force to p0
-					glm::vec2 dp = p1 - p0;
-					float dist = glm::length(dp);
-					std::cout << dist << std::endl;
-					if (dist > cMaxDistance) continue; // Prune particles that are too far
-					// Calculate acceleration vector toward p1.
-					float accel = cMaxAccel * std::exp(-dist*cFallOffRate);
-					std::cout << accel << std::endl;
-					glm::vec2 a10 = dp * accel;
-					a0 += a10;
+				int stripeNo = clamp(particlePos[i * 2 + 0] / cMaxDistance, 0, numStripes);
+				int subCellNo = clamp(particlePos[i * 2 + 1] / cMaxDistance, 0, cellsPerStripe);
+				stripes[stripeNo][subCellNo].push_back(i);
+			}
+			
+			// Fast Simulation Parametre
+			std::vector<std::vector<glm::vec2>> meanPos;	// Mean of Positions per cell
+			std::vector<std::vector<float>> numPos;			// Number of Positions per cell
+			if (fastSimulate) {
+				// Size the meanPos and numPos 2D arrays
+				meanPos.resize(numStripes);
+				numPos.resize(numStripes);
+				for (int stripe = 0; stripe < numStripes; stripe++) {
+					meanPos[stripe].resize(cellsPerStripe);
+					numPos[stripe].resize(cellsPerStripe);
+					for (int cell = 0; cell < cellsPerStripe; cell++) {
+						meanPos[stripe][cell] = glm::vec2(0, 0);
+						numPos[stripe][cell] = 1e-9;
+					}
+				}
+				// Fill arrays with mean position within each cell and number of positions per cell
+				for (int stripe = 0; stripe < numStripes; stripe++) {
+					for (int cell = 0; cell < cellsPerStripe; cell++) {
+						for (int i : stripes[stripe][cell]) {
+							meanPos[stripe][cell].x += particlePos[2 * i + 0];
+							meanPos[stripe][cell].y += particlePos[2 * i + 1];
+							numPos[stripe][cell] += 1.0001f; // Code is FUCKING MORONIC. For some reason if I don't make use of decimals, the integer-ness makes vector freak the fuck out and crash. fucking stupid.
+						}
+						meanPos[stripe][cell] /= numPos[stripe][cell];
+					}
 				}
 
-				particleVel[2 * i + 0] += a0.x;
-				particleVel[2 * i + 1] += a0.y;
 			}
-			// Update Position via updated velocity (Simplecton)
-			for (int i = 0; i < particlePos.size(); i++) {
-				particlePos[i] += particleVel[i];
+
+			// For each vertical stripe
+			for (int stripe = 0; stripe < numStripes; stripe++) {
+				bool rightOK = stripe < numStripes - 1; // Right is +1
+				bool leftOK = stripe > 0; // Left is -1
+
+				// For each cell in stripe
+				for (int cell = 0; cell < cellsPerStripe; cell++) {
+					bool upOK = cell < cellsPerStripe - 1; // Up is +1
+					bool downOK = cell > 0; // Down is -1
+					// For each particle i in this cell
+
+					for (int i : stripes[stripe][cell]) {
+						// Position and Acceleration of this particle
+						glm::vec2 p_i(particlePos[i * 2 + 0], particlePos[i * 2 + 1]);
+						glm::vec2 a_i(0.0f, 0.0f);
+
+						if (fastSimulate) { // Fast Simulate: Calculate Cohesion Force between particle i and regions
+							// Calculate cohesive acceleration on this particle based on this cell and neighoubr cells
+							if (rightOK && upOK)	a_i += calculateCohesiveAccelByPositionAndStrength(p_i, meanPos[stripe + 1][cell + 1], numPos[stripe + 1][cell + 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (rightOK)			a_i += calculateCohesiveAccelByPositionAndStrength(p_i, meanPos[stripe + 1][cell + 0], numPos[stripe + 1][cell + 0], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (rightOK && downOK)	a_i += calculateCohesiveAccelByPositionAndStrength(p_i, meanPos[stripe + 1][cell - 1], numPos[stripe + 1][cell - 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (leftOK && upOK)		a_i += calculateCohesiveAccelByPositionAndStrength(p_i, meanPos[stripe - 1][cell + 1], numPos[stripe - 1][cell + 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (leftOK)				a_i += calculateCohesiveAccelByPositionAndStrength(p_i, meanPos[stripe - 1][cell + 0], numPos[stripe - 1][cell + 0], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (leftOK && downOK)	a_i += calculateCohesiveAccelByPositionAndStrength(p_i, meanPos[stripe - 1][cell - 1], numPos[stripe - 1][cell - 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (upOK)				a_i += calculateCohesiveAccelByPositionAndStrength(p_i, meanPos[stripe + 0][cell + 1], numPos[stripe + 0][cell + 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (downOK)				a_i += calculateCohesiveAccelByPositionAndStrength(p_i, meanPos[stripe + 0][cell - 1], numPos[stripe + 0][cell - 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							a_i += calculateCohesiveAccelByPositionAndStrength(p_i, meanPos[stripe + 0][cell + 0], numPos[stripe + 0][cell + 0], cMaxAccel, cMaxDistance, fallOffCoeff);
+
+						}
+						else { // Slow Simulate: Calculate Cohesion Force between particle i and every single particle in regions
+							// Calculate cohesive acceleration on this particle based on this cell and neighoubr cells
+							if (rightOK && upOK)	a_i += calculateCohesiveAccelForParticleIndices(p_i, stripes[stripe + 1][cell + 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (rightOK)			a_i += calculateCohesiveAccelForParticleIndices(p_i, stripes[stripe + 1][cell + 0], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (rightOK && downOK)	a_i += calculateCohesiveAccelForParticleIndices(p_i, stripes[stripe + 1][cell - 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (leftOK && upOK)		a_i += calculateCohesiveAccelForParticleIndices(p_i, stripes[stripe - 1][cell + 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (leftOK)				a_i += calculateCohesiveAccelForParticleIndices(p_i, stripes[stripe - 1][cell + 0], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (leftOK && downOK)	a_i += calculateCohesiveAccelForParticleIndices(p_i, stripes[stripe - 1][cell - 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (upOK)				a_i += calculateCohesiveAccelForParticleIndices(p_i, stripes[stripe + 0][cell + 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							if (downOK)				a_i += calculateCohesiveAccelForParticleIndices(p_i, stripes[stripe + 0][cell - 1], cMaxAccel, cMaxDistance, fallOffCoeff);
+							std::list<int> particlesInThisCell = stripes[stripe][cell];
+							particlesInThisCell.remove(i); // Ignore this own particle
+							a_i += calculateCohesiveAccelForParticleIndices(p_i, particlesInThisCell, cMaxAccel, cMaxDistance, fallOffCoeff);
+
+						}
+
+						//// Integrate acceleration on particle i into velocity on particle i
+						particleVel[i * 2 + 0] += a_i.x * dt;
+						particleVel[i * 2 + 1] += a_i.y * dt;
+					}
+				}
+
 			}
+			
 		}
 
 
@@ -781,16 +884,19 @@ class FlipFluid {
 
 		// Simulates the next simulation timestep
 		void simulate(float dt, float gravity, float flipRatio, int numPressureIters, int numParticleIters, float overRelaxation, bool compensateDrift, bool separateParticles, float obstacleX, float abstacleY, float obstacleRadius, 
-			float cMaxAccel, float cFallOffRate, float cMaxDistance)
+			bool cohesionOn, float cMaxAccel, float cMaxDistance, bool fastCohesionSimulate)
 		{
+
+			std::chrono::high_resolution_clock::time_point startTime = std::chrono::high_resolution_clock::now();
+
 
 			int numSubSteps = 1;
 			float sdt = dt / numSubSteps;
 
 			for (int step = 0; step < numSubSteps; step++) {
 
+				if (cohesionOn) addCohesionAccel(sdt, cMaxAccel, cMaxDistance, fastCohesionSimulate);
 				integrateParticles(sdt, gravity);
-				//integrateCohesion(sdt, cMaxAccel, cFallOffRate, cMaxDistance);
 				if (separateParticles) pushParticlesApart(numParticleIters);
 				handleParticleCollisions(obstacleX, abstacleY, obstacleRadius);
 				transferVelocities(true, 999.9f);
@@ -801,6 +907,10 @@ class FlipFluid {
 
 			updateParticleColors();
 			updateCellColors();
+
+
+			std::chrono::high_resolution_clock::time_point endTime = std::chrono::high_resolution_clock::now();
+			previousFrameTime = std::chrono::duration_cast<std::chrono::duration<double>>(endTime - startTime).count();
 
 		}
 

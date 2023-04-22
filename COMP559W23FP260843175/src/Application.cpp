@@ -282,7 +282,7 @@ void simulate() {
 			scene.dt, scene.gravity, scene.flipRatio, scene.numPressureIters, scene.numParticleIters,
 			scene.overRelaxation, scene.compensateDrift, scene.separateParticles,
 			scene.obstacleX, scene.obstacleY, scene.obstacleRadius,
-			scene.cohesionMaxAccel, scene.cohesionFallOffRate, scene.cohesionMaxDistance);
+			scene.cohesionOn, scene.cohesionMaxAccel, scene.cohesionMaxDistance, scene.fastCohesion);
 		scene.frameNr++;
 		stepForward = false; // If keyboard asks for stepforward, step forward once.
 	}
@@ -569,6 +569,7 @@ void drawUI() {
 	ImGui::Text("Shortkeys:\n\tSpace\t- pause/resume");
 	ImGui::Checkbox("Paused", &scene.paused);
 	ImGui::Text("Frame Number: %7i", scene.frameNr);
+	ImGui::Text("Frame Time: %1.7f seconds", fluid.previousFrameTime);
 	if (!prevTickWasPaused) {
 		ImGui::Text("Simulation Rate: %.2f times real speed", velocity);
 	}
@@ -581,9 +582,10 @@ void drawUI() {
 	ImGui::SliderInt("Divergence Solver GS-Iters", &scene.numPressureIters, 1, 200);
 	ImGui::SliderInt("Particle Separation GS-Iters", &scene.numParticleIters, 1, 10);
 	ImGui::SliderFloat("G-S Over Relaxation", &scene.overRelaxation, 1.0f, 2.0f);
-	ImGui::SliderFloat("Cohesion Max Accel", &scene.cohesionMaxAccel, 0.0f, 0.10f);
-	ImGui::SliderFloat("Cohesion Falloff Rate", &scene.cohesionFallOffRate, 0.0f, 10.0f);
-	ImGui::SliderFloat("Cohesion Max Distance", &scene.cohesionMaxDistance, 0.0f, 1.0f);
+	ImGui::Checkbox("Cohesion On", &scene.cohesionOn);
+	ImGui::SliderFloat("Cohesion Max Accel", &scene.cohesionMaxAccel, 0.0f, 10.0f);
+	ImGui::SliderFloat("Cohesion Max Distance", &scene.cohesionMaxDistance, 0.0f, 0.10f);
+	ImGui::Checkbox("Fast Cohesion Sim", &scene.fastCohesion);
 	ImGui::Checkbox("Drift Compensation", &scene.compensateDrift);
 	ImGui::Checkbox("Separate Particles", &scene.separateParticles);
 	ImGui::Checkbox("Show Obstacle", &scene.showObstacle);

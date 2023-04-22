@@ -35,9 +35,10 @@ public:
 	float obstacleVelY = 0.0f;
 	bool showParticles = true;
 	bool showGrid = false;
+	bool cohesionOn = true;
 	float cohesionMaxAccel;
-	float cohesionFallOffRate; 
 	float cohesionMaxDistance;
+	bool fastCohesion = true;
 
 	Scene() {
 		gravity = -9.81f;
@@ -58,9 +59,10 @@ public:
 		obstacleVelY = 0.0f;
 		showParticles = true;
 		showGrid = false;
+		cohesionOn = true;
 		cohesionMaxAccel = 0.01f;
-		cohesionFallOffRate = 10.0f;
-		cohesionMaxDistance = 0.5f;
+		cohesionMaxDistance = 0.03f;
+		fastCohesion = true;
 	}
 
 };

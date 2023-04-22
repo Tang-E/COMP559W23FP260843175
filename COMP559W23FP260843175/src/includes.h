@@ -7,6 +7,7 @@
 #include <vector>
 #include <cmath>
 #include <chrono>
+#include <list>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
