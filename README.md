@@ -1,6 +1,8 @@
 # COMP559W23FP260843175
 Edwin Pan's COMP559 Fundamentals of Computer Animation Winter 2023 Final Project repository. A Visual Studio C++ adaptation of Matthias Muller's FLIP PIC fluid simulator (found here https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/18-flip.html) with a small (and not very functional) tweak attempting to add cohesion forces.
 
+You should check out the Matthias Muller's online demo here https://matthias-research.github.io/pages/tenMinutePhysics/18-flip.html cause it's really cool! I also used his video here https://www.youtube.com/watch?v=XmzBREkK8kY as reference for this project. Speaking of videos, I did a quick recording of the simulator which you can watch here https://youtu.be/csRBQIBRP5U. What is being shown in the video is discussed at the bottom of the written details about the video.
+
 
 # There is at least one bug!!!
 
