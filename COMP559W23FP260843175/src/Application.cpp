@@ -57,9 +57,6 @@ unsigned int gridVertexBuffer = -1;
 unsigned int gridColorBuffer = -1;
 unsigned int diskVertBuffer = -1;
 unsigned int diskIdBuffer = -1;
-// TEMPORARY EXPERIMENTAL STUFF
-unsigned int tempVertexBuffer = -1;
-unsigned int tempColourBuffer = -1;
 
 
 
@@ -88,7 +85,7 @@ std::chrono::high_resolution_clock::time_point currTick;
 bool prevTickWasPaused = true;
 
 // Sim Physical Properties SET UP
-int res = 100;
+int res = 80;
 float tankHeight = 1.0 * simHeight;
 float tankWidth = 1.0 * simWidth;
 float h = tankHeight / res;
@@ -206,6 +203,23 @@ void finishSceneFluidSetup() {
 			fluid.particlePos[p++] = h + r + dy * j;
 		}
 	}
+	p = 0;
+	for (int i = 0; i < numX; i++) {
+		for (int j = 0; j < numY; j++) {
+			fluid.particleVel[p++] = 0.0f;
+			fluid.particleVel[p++] = 0.0f;
+		}
+	}
+	// Particle Colour Resetting
+	for (int i = 0; i < fluid.maxParticles; i++) {
+		fluid.particleColor[3 * i + 0] = 0.0; 
+		fluid.particleColor[3 * i + 1] = 0.0; 
+		fluid.particleColor[3 * i + 2] = 1.0; // Make blue, not white
+	}
+	for (int i = 0; i < fluid.fNumCells; i++) {
+		fluid.particleDensity[i] = 0.0f;
+	}
+	fluid.particleRestDensity = 0.0f;
 	// Fluid Grid Setup
 	int n = fluid.fNumY;
 	for (int i = 0; i < fluid.fNumX; i++) {
@@ -576,16 +590,16 @@ void drawUI() {
 	else {
 		ImGui::Text("Simulation Rate: PAUSED");
 	}
+	ImGui::Checkbox("Cohesion On", &scene.cohesionOn);
+	ImGui::SliderFloat("Cohesion Max Accel", &scene.cohesionMaxAccel, 0.0f, 1.25f);
+	ImGui::SliderFloat("Cohesion Max Distance", &scene.cohesionMaxDistance, 0.0f, 0.25f);
+	ImGui::Checkbox("Fast Cohesion Sim", &scene.fastCohesion);
 	ImGui::SliderFloat("g", &scene.gravity, -9.81f, 9.81f);
 	ImGui::SliderFloat("dt", &scene.dt, 0.001f, 0.1f);
 	ImGui::SliderFloat("PIC-FLIP Ratio", &scene.flipRatio, 0.0f, 1.0f);
 	ImGui::SliderInt("Divergence Solver GS-Iters", &scene.numPressureIters, 1, 200);
 	ImGui::SliderInt("Particle Separation GS-Iters", &scene.numParticleIters, 1, 10);
 	ImGui::SliderFloat("G-S Over Relaxation", &scene.overRelaxation, 1.0f, 2.0f);
-	ImGui::Checkbox("Cohesion On", &scene.cohesionOn);
-	ImGui::SliderFloat("Cohesion Max Accel", &scene.cohesionMaxAccel, 0.0f, 10.0f);
-	ImGui::SliderFloat("Cohesion Max Distance", &scene.cohesionMaxDistance, 0.0f, 0.10f);
-	ImGui::Checkbox("Fast Cohesion Sim", &scene.fastCohesion);
 	ImGui::Checkbox("Drift Compensation", &scene.compensateDrift);
 	ImGui::Checkbox("Separate Particles", &scene.separateParticles);
 	ImGui::Checkbox("Show Obstacle", &scene.showObstacle);

@@ -111,12 +111,6 @@ class FlipFluid {
 			this->h = max(width / this->fNumX, height / this->fNumY);
 			this->fInvSpacing = 1.0 / this->h;
 			this->fNumCells = this->fNumX * this->fNumY;
-			std::cout << "<FlipFluid> \n"
-				<< "\tfNumX = " << this->fNumX << "\n"
-				<< "\tfNumY = " << this->fNumY << "\n"
-				<< "\th = " << this->h << "\n"
-				<< "\tfInvSpacing = " << this->fInvSpacing << "\n"
-				<< "\tfNumCells = " << this->fNumCells << std::endl;
 
 			this->u.resize(fNumCells);
 			this->v.resize(fNumCells);
